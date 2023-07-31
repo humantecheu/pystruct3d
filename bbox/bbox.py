@@ -68,7 +68,10 @@ class bbox:
         # Translate the points back to the original position
         self.corner_points += center
     
-    def points_in_bbox(self, points, tolerance=1e-12):
+    def points_in_bbox(self, 
+                       points: np.ndarray,
+                       tolerance=1e-12
+                       ):
         """find the points inside a bounding box
 
         Args:
@@ -99,31 +102,128 @@ class bbox:
             print("-- trying to construct empty convex hull, passing ...")
             return np.empty((0,)), np.empty((0,))
         
+    def translate(self, 
+                  translation_vector: np.ndarray # shape (3, )
+                  ):
+        """translate the bounding box along a given vector
+
+        Args:
+            translation_vector (np.ndarray): translation vector
+        """
+        self.corner_points += translation_vector
+
+    def translate_z(self, **kwargs):
+        """translates the bounding box 4 lower points to min_z or the four top points to max_z respectively
+
+        Kwargs:
+            min_z (float): minimum z value 
+            max_z (float): maximum z value 
+
+        """
+
+        # get keyword arguments
+        min_z = kwargs.get("min_z", self.corner_points[0, 2])
+        max_z = kwargs.get("max_z", self.corner_points[4, 2])
+
+        min_zs = np.full((4, ), min_z)
+        max_zs = np.full((4, ), max_z)
+
+        self.corner_points[:4, 2] = min_zs
+        self.corner_points[4:8, 2] = max_zs
+
+    def width(self):
+        """returns the width (base plane), always larger dimension
+
+        Returns:
+            float: width
+        """
+        """      
+          x---------------x 
+         /|              /|
+        x---------------x |
+        | |             | |
+        | x-------------|-x 
+        |/              |/ 
+        x---------------x
+          <--WIDTH-->     
+        """
+
+        # take all lower points, calculate edge lengths, return largest as width        
+        lower_points = self.corner_points[: 4]
+        lower_points_rolled = np.roll(lower_points, 1, axis=0)
+        edges = lower_points_rolled - lower_points
+        widths = np.linalg.norm(edges, axis=1)
+        width = np.max(widths)
+
+        return width
+        
+
+    def split_bounding_box(self):
+        """Splits the bounding box into two. Modifies self, returns the other box
+
+        Returns:
+            bbox: other bounding box
+        """
+
+        # take all lower points, calculate edge lengths, return largest as width        
+        points_rolled = np.roll(self.corner_points, 1, axis=0)
+        edges = points_rolled - self.corner_points
+        widths = np.linalg.norm(edges, axis=1)
+        longest_idx = np.argmax(widths)
+        half_edges = edges / 2
+
+        # set every 2nd row to zero starting from the first row
+        if longest_idx == 0:
+            transform = half_edges[0]
+
+            transform_mat = np.zeros((8,3))
+            transform_mat[[1, 2, 5, 6]] = transform
+
+            other_transform_mat = np.zeros((8,3))
+            other_transform_mat[::] = transform
+            
+        elif longest_idx == 1: 
+            transform = half_edges[1]
+            
+            transform_mat = np.zeros((8,3))
+            transform_mat[[1, 2, 5, 6]] = transform
+
+            other_transform_mat = np.zeros((8,3))
+            other_transform_mat[::] = transform
+
+        self.corner_points += transform_mat
+
+        other_points = np.copy(self.corner_points) 
+        other_points -= other_transform_mat
+        other_box = bbox(other_points)
+
+        return other_box
+
+
+    def axis_align(self):
+        """Axis aligns the bounding box. Calculates the minimum value against the x-axis, then rotates the box with this value. 
+        """
+
+
+        points_rolled = np.roll(self.corner_points, 1, axis=0)
+        edges = points_rolled - self.corner_points
+        
+        edges_xy = edges[:, :2]
+
+        angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
+        
+
+        
+        print(np.rad2deg(angles))
+
+        
+        angle = np.rad2deg(np.min(angles))
+        print(f"min angle {angle}")
+        angle = angle % 90
+        if angle <= 45:
+            self.rotate(- angle)
+        else:
+            self.rotate(90-angle)
+        
     def as_np_array(self):
         return self.corner_points
-    
-
-    
-
-if __name__=="__main__":
-
-    rand_pts = np.random.uniform(0, 6, size=(200000,3))
-    sample_points = np.array([
-        [0., 0., 0.], 
-        [5., 0., 0.], 
-        [5., 1., 0.],
-        [0., 1., 0.],
-        [0., 0., 3.],
-        [5., 0., 3.],
-        [5., 1., 3.],
-        [0., 1., 3.]
-    ])
-    print(sample_points.shape)
-    bx = bbox(sample_points)
-    print(rand_pts)
-    # bx.rotate(45)
-    points_in, idx = bx.points_in_bbox(rand_pts)
-    print(points_in)
-    print(np.shape(idx))
-    box_array = bx.as_np_array()
-    print(f"Box array shape: {box_array.shape}")
