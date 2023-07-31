@@ -1,5 +1,9 @@
 # pystruct3d
 
+# Installation
+
+The `-e` flag is used for development
+`pip install -e .`
 
 # Python version
 
