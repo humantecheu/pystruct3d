@@ -205,6 +205,24 @@ class BBox:
 
         return height
 
+    def angle(self):
+        """Returns the counter-clockwise angle of the bounding box to the x-axis.
+
+        Returns:
+            float: angle in degrees
+        """
+        edges = self.lower_edges()
+        lengths = np.linalg.norm(edges, axis=1)
+        longest_idx = np.argmax(lengths)
+
+        angle = 180 + np.rad2deg(
+            np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
+        )
+
+        angle = (angle + 360) % 360
+
+        return angle
+
     def split_bounding_box(self):
         """Splits the bounding box into two. Modifies self, returns the other box
 
@@ -383,7 +401,61 @@ class BBox:
         )
         self.corner_points = min_box_points
 
-        pass
-
     def fit_minimal():
         pass
+
+    def bbox_from_verts(
+        self,
+        verts: np.ndarray,  # n,
+    ) -> np.ndarray:
+        """Function to get the bounding box from vertices. Vertices are the
+        points of an IFC geometry shape as a np.ndarray of shape n, . The vertices
+        can be obtained from the IFC geometry using IfcOpenShell as follows:
+        settings = ifcopenshell.geom.settings()
+        settings.set(settings.USE_WORLD_COORDS, True)
+        shape = ifcopenshell.geom.create_shape(settings, element)
+        verts = np.asarray(shape.geometry.verts)
+        where element is an IfcElement e.g., IfcWall
+        Note, that you have to provide the element using IfcOpenShell e.g.,
+        filtered from an IFC file.
+
+        Args:
+            verts (np.ndarray): input vertices of shape n,
+
+        Returns:
+            bounding box (np.ndarray): bouding box of shape (8, 3)
+        """
+
+        # reshape to n, 3
+        orig_shape = verts.shape[0]
+
+        verts = verts.reshape((int(orig_shape / 3), 3))
+
+        corner_pts = verts[verts[:, 2].argsort()]
+
+        # remove points between min_z, max_z
+        min_z = np.amin(corner_pts[:, 2])
+        max_z = np.amax(corner_pts[:, 2])
+
+        rm_indices = np.where((corner_pts[:, 2] > min_z) & (corner_pts[:, 2] < max_z))
+        corner_pts = np.delete(corner_pts, rm_indices, axis=0)
+
+        # remove points on edges in between min and max points (could be door points etc.)
+
+        # find centroid
+        # centrd = np.median(bbox, axis=0)
+        centrd = np.mean(corner_pts, axis=0)
+
+        # find 8 points furthest away from centroid
+
+        diffs = np.subtract(corner_pts, centrd)
+
+        dists = np.linalg.norm(diffs, axis=1)
+
+        # take 8 points with maximum distances to centroid
+        corner_pts_idx = (-dists).argsort()[:8]
+
+        corner_pts = corner_pts[corner_pts_idx]
+
+        self.corner_points = corner_pts
+        self.order_points()
