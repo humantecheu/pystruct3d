@@ -215,10 +215,8 @@ class BBox:
         lengths = np.linalg.norm(edges, axis=1)
         longest_idx = np.argmax(lengths)
 
-        angle = 180 + np.rad2deg(
-            np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
-        )
-
+        rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
+        angle = np.rad2deg(rad_angle)
         angle = (angle + 360) % 360
 
         return angle
@@ -400,6 +398,8 @@ class BBox:
             min_box_points, np.linalg.inv(rotation_matrices[min_idx]).T
         )
         self.corner_points = min_box_points
+
+        return self
 
     def fit_minimal():
         pass
