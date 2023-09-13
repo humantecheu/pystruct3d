@@ -2,6 +2,8 @@ from typing import List, Tuple
 
 import numpy as np
 
+from pystruct3d.metrics.voxelization_limits import voxelization_limits
+
 
 def voxelize_pointcloud(
     pointcloud: np.ndarray,
@@ -19,8 +21,9 @@ def voxelize_pointcloud(
         np.ndarray: _description_
     """
     min_vals, max_vals = volume_limits
-    indices = ((pointcloud - min_vals) / voxel_size).astype(int)
     volume_dims = np.ceil((max_vals - min_vals) / voxel_size).astype(int)
+    indices = ((pointcloud - min_vals) / voxel_size).astype(int)
+
     x_dim = volume_dims[0]
     y_dim = volume_dims[1]
 
@@ -36,28 +39,35 @@ def voxelize_pointcloud(
 
 
 def voxel_iou(
-    groundtruth_pc: np.ndarray, predicted_pc: np.ndarray, voxel_size: float = 0.01
+    groundtruth_pc: np.ndarray,
+    predicted_pc: np.ndarray,
+    volume_limits: Tuple[np.ndarray, np.ndarray] = None,
+    voxel_size: float = 0.01,
 ) -> Tuple[float, float]:
     """_summary_
 
     Args:
         groundtruth_pc (np.ndarray): _description_
         predicted_pc (np.ndarray): _description_
+        volume_limits (Tuple[int, int]): _description_
         voxel_size (float, optional): _description_. Defaults to 0.01.
 
     Returns:
         Tuple[float, float]: _description_
     """
-    min_vals = np.floor(
-        np.minimum(np.min(groundtruth_pc, axis=0), np.min(predicted_pc, axis=0))
-    ).astype(int)
-    max_vals = np.ceil(
-        np.maximum(np.max(groundtruth_pc, axis=0), np.max(predicted_pc, axis=0))
-    ).astype(int)
-    volume_limits = (min_vals, max_vals)
+    if volume_limits is None:
+        volume_limits = voxelization_limits(groundtruth_pc, predicted_pc)
 
-    groundtruth_indices = voxelize_pointcloud(groundtruth_pc, volume_limits, voxel_size)
-    predicted_indices = voxelize_pointcloud(predicted_pc, volume_limits, voxel_size)
+    groundtruth_indices = voxelize_pointcloud(
+        pointcloud=groundtruth_pc,
+        volume_limits=volume_limits,
+        voxel_size=voxel_size,
+    )
+    predicted_indices = voxelize_pointcloud(
+        pointcloud=predicted_pc,
+        volume_limits=volume_limits,
+        voxel_size=voxel_size,
+    )
 
     len_intersect = len(np.intersect1d(groundtruth_indices, predicted_indices))
     len_union = len(np.union1d(groundtruth_indices, predicted_indices))
@@ -93,10 +103,16 @@ def main() -> None:
         # Generate two random point clouds with points in a 3D space ranging from [0, 20]
         pointcloud1 = np.random.uniform(low=0.0, high=20.0, size=(i * 1000000, 3))
         pointcloud2 = np.random.uniform(low=0.0, high=20.0, size=(i * 800000, 3))
-        classes_iou.append(voxel_iou(pointcloud1, pointcloud2, 0.1))
+        classes_iou.append(
+            voxel_iou(
+                groundtruth_pc=pointcloud1,
+                predicted_pc=pointcloud2,
+                voxel_size=0.1,
+            )
+        )
         print(f"Class_{i} IoU: {classes_iou[-1][0]}")
 
-    print(f"mIoU: {mean_voxel_iou(classes_iou)}")
+    print(f"mIoU: {mean_voxel_iou(classes_iou=classes_iou)}")
 
 
 if __name__ == "__main__":
