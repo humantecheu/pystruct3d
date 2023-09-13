@@ -6,22 +6,24 @@ from pystruct3d.bbox.bbox import BBox
 
 
 def create_bounding_box(
-    x: float, y: float, z: float, l: float, w: float, h: float
+    bottom_corner: Tuple[float, float, float],
+    l: float,
+    w: float,
+    h: float,
 ) -> np.ndarray:
-    """Create a bounding box with lower left corner at (x, y, z),
+    """Create a bounding box with bottom left corner at (x, y, z),
     length l, width w, and height h
 
     Args:
-        x (float): _description_
-        y (float): _description_
-        z (float): _description_
-        l (float): _description_
-        w (float): _description_
-        h (float): _description_
+        bottom_corner (Tuple[float, float, float]): bottom left corner
+        l (float): length (m)
+        w (float): width (m)
+        h (float): height (m)
 
     Returns:
-        np.ndarray: _description_
+        np.ndarray: 8x3 array of bounding box corners
     """
+    x, y, z = bottom_corner
     return np.array(
         [
             [x, y, z],
@@ -69,7 +71,7 @@ def generate_bounding_boxes(
         z = np.random.uniform(*z_range)
 
         # Create bounding box
-        box = create_bounding_box(x, y, z, l, w, h)
+        box = create_bounding_box((x, y, z), l, w, h)
         bounding_boxes.append(BBox(box))
 
         # Move to the next position
