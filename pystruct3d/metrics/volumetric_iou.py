@@ -1,11 +1,11 @@
 from typing import List, Tuple
 
 import numpy as np
-from scipy.spatial import ConvexHull
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.generate_example import create_bbox_lists
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
+# from pystruct3d.visualization.visualization import Visualization
 
 
 def voxelize_bbox(
@@ -48,6 +48,11 @@ def voxelize_bbox(
         indices[:, 0]
     )
     # fmt: on
+
+    # vis = Visualization()
+    # vis.bbox_geometry(bbox)
+    # vis.point_cloud_geometry(points_in_bbox)
+    # vis.visualize()
 
     return np.unique(unravelled_indices)
 
@@ -102,6 +107,7 @@ def mean_volumetric_iou(classes_iou: List[Tuple[float, float]]) -> float:
 
 def main():
     bboxes_1, bboxes_2 = create_bbox_lists()
+    bboxes_1[0].rotate(30)
     volumetric_iou(bboxes_1, bboxes_2)
 
 
