@@ -64,10 +64,10 @@ def voxelization_limits(
     for arg in args:
         if isinstance(arg, np.ndarray):
             limits_list.append(pc_limits(arg))
-        elif isinstance(arg, List) and all(isinstance(item, BBox) for item in arg):
-            limits_list.append(bbox_limits(arg))
         elif isinstance(arg, BBox):
             limits_list.append(bbox_limits([arg]))
+        elif isinstance(arg, List) and all(isinstance(item, BBox) for item in arg):
+            limits_list.append(bbox_limits(arg))
         else:
             raise TypeError("Arguments can either be of type np.ndarray or List[BBox]")
 
