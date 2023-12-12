@@ -7,6 +7,9 @@ class BBox:
 
     def __init__(self, corner_points=np.zeros((8, 3))) -> None:  # shape (8, 3)
         self.corner_points = corner_points
+        # ensure the corners are ordered as the BBox is initialized
+        if np.any(self.corner_points):
+            self.order_points()
 
     def __str__(self):
         string = f"Bounding Box with points {self.corner_points}"
@@ -79,6 +82,24 @@ class BBox:
         self.corner_points = np.dot(self.corner_points, rot_mat.T)
         # Translate the points back to the original position
         self.corner_points += center
+
+    def points_in_bbox_probability(self, points: np.ndarray):
+        def calculate_corner_distance():
+            distances = []
+            for point in self.corner_points:
+                distances.append(np.sqrt(np.sum((points - point) ** 2, axis=1)))
+
+            return np.array(distances).T
+
+        diagonal = np.linalg.norm(self.corner_points[6] - self.corner_points[0])
+        d = calculate_corner_distance()
+
+        rows_below_threshold = np.all(d < diagonal, axis=1)
+
+        # Get the indices of these rows
+        row_indices = np.where(rows_below_threshold)[0]
+
+        return row_indices
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
