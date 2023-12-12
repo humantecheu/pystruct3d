@@ -139,6 +139,43 @@ class BBox:
         self.corner_points[:4, 2] = min_zs
         self.corner_points[4:8, 2] = max_zs
 
+    def expand(self, offset):
+        """Expand the bounding box to either direction with a given offset"""
+        length_vector = self.corner_points[1] - self.corner_points[0]
+        length_vector_norm = length_vector / np.linalg.norm(length_vector)
+        widht_vector = self.corner_points[2] - self.corner_points[1]
+        width_vector_norm = widht_vector / np.linalg.norm(widht_vector)
+
+        length_offset = offset * length_vector_norm
+        width_offset = offset * width_vector_norm
+        height_offset = offset * np.asarray([0.0, 0.0, 1.0])
+
+        # apply vectors to points
+        self.corner_points[0] = (
+            self.corner_points[0] - length_offset - width_offset - height_offset
+        )
+        self.corner_points[1] = (
+            self.corner_points[1] + length_offset - width_offset - height_offset
+        )
+        self.corner_points[2] = (
+            self.corner_points[2] + length_offset + width_offset - height_offset
+        )
+        self.corner_points[3] = (
+            self.corner_points[3] - length_offset + width_offset - height_offset
+        )
+        self.corner_points[4] = (
+            self.corner_points[4] - length_offset - width_offset + height_offset
+        )
+        self.corner_points[5] = (
+            self.corner_points[5] + length_offset - width_offset + height_offset
+        )
+        self.corner_points[6] = (
+            self.corner_points[6] + length_offset + width_offset + height_offset
+        )
+        self.corner_points[7] = (
+            self.corner_points[7] - length_offset + width_offset + height_offset
+        )
+
     def lower_edges(self):
         lower_points = self.corner_points[:4]
         lower_points_rolled = np.roll(lower_points, 1, axis=0)
