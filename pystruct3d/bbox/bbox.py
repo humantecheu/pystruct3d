@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from scipy.spatial import ConvexHull
 
@@ -121,26 +123,29 @@ class BBox:
         normals = calculate_plane_normals()
 
         def calculate_relative_position():
+            start = time.time()
             p1 = np.dot(points - self.corner_points[0], normals[0])
             p2 = np.dot(points - self.corner_points[1], normals[1])
             p3 = np.dot(points - self.corner_points[2], normals[2])
             p4 = np.dot(points - self.corner_points[3], normals[3])
             p5 = np.dot(points - self.corner_points[0], normals[4])
             p6 = np.dot(points - self.corner_points[4], normals[5])
-
-            return np.where(np.vstack((p1, p2, p3, p4, p5, p6)) > 0, 1, 0).T
+            print("dot ", time.time() - start)
+            start = time.time()
+            result = np.vstack((p1, p2, p3, p4, p5, p6)).T
+            print("stack ", time.time() - start)
+            # start = time.time()
+            # result = np.where(result > 0, 1, 0).T
+            # print("where ", time.time() - start)
+            return (result > 0).astype(int)
 
         positions = calculate_relative_position()
         print(positions)
+        start = time.time()
+        fin = np.where(~positions.any(axis=1))[0]
+        print("where2 ", time.time() - start)
 
-        return np.where(
-            # (positions[:, 0] == 0)
-            # & (positions[:, 1] == 0)
-            # & (positions[:, 2] == 0)
-            # & (positions[:, 3] == 0)
-            # & (positions[:, 4] == 0)
-            # & (positions[:, 5] == 0)
-        )[0]
+        return fin
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
