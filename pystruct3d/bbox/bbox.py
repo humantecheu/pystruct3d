@@ -84,22 +84,63 @@ class BBox:
         self.corner_points += center
 
     def points_in_bbox_probability(self, points: np.ndarray):
-        def calculate_corner_distance():
-            distances = []
-            for point in self.corner_points:
-                distances.append(np.sqrt(np.sum((points - point) ** 2, axis=1)))
+        def calculate_plane_normals():
+            n1 = np.cross(
+                self.corner_points[1] - self.corner_points[0],
+                self.corner_points[4] - self.corner_points[0],
+            )
+            n1 = n1 / np.linalg.norm(n1)
+            n2 = np.cross(
+                self.corner_points[2] - self.corner_points[1],
+                self.corner_points[5] - self.corner_points[1],
+            )
+            n2 = n2 / np.linalg.norm(n2)
+            n3 = np.cross(
+                self.corner_points[3] - self.corner_points[2],
+                self.corner_points[6] - self.corner_points[2],
+            )
+            n3 = n3 / np.linalg.norm(n3)
+            n4 = np.cross(
+                self.corner_points[0] - self.corner_points[3],
+                self.corner_points[7] - self.corner_points[3],
+            )
+            n4 = n4 / np.linalg.norm(n4)
+            n5 = np.cross(
+                self.corner_points[3] - self.corner_points[0],
+                self.corner_points[1] - self.corner_points[0],
+            )
+            n5 = n5 / np.linalg.norm(n5)
+            n6 = np.cross(
+                self.corner_points[5] - self.corner_points[4],
+                self.corner_points[7] - self.corner_points[4],
+            )
+            n6 = n6 / np.linalg.norm(n6)
 
-            return np.array(distances).T
+            return np.array([n1, n2, n3, n4, n5, n6])
 
-        diagonal = np.linalg.norm(self.corner_points[6] - self.corner_points[0])
-        d = calculate_corner_distance()
+        normals = calculate_plane_normals()
 
-        rows_below_threshold = np.all(d < diagonal, axis=1)
+        def calculate_relative_position():
+            p1 = np.dot(points - self.corner_points[0], normals[0])
+            p2 = np.dot(points - self.corner_points[1], normals[1])
+            p3 = np.dot(points - self.corner_points[2], normals[2])
+            p4 = np.dot(points - self.corner_points[3], normals[3])
+            p5 = np.dot(points - self.corner_points[0], normals[4])
+            p6 = np.dot(points - self.corner_points[4], normals[5])
 
-        # Get the indices of these rows
-        row_indices = np.where(rows_below_threshold)[0]
+            return np.where(np.vstack((p1, p2, p3, p4, p5, p6)) > 0, 1, 0).T
 
-        return row_indices
+        positions = calculate_relative_position()
+        print(positions)
+
+        return np.where(
+            # (positions[:, 0] == 0)
+            # & (positions[:, 1] == 0)
+            # & (positions[:, 2] == 0)
+            # & (positions[:, 3] == 0)
+            # & (positions[:, 4] == 0)
+            # & (positions[:, 5] == 0)
+        )[0]
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
