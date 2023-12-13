@@ -31,6 +31,8 @@ The corner points are ordered in counter-clockwise order from bottom to the top.
 
 # ToDo table
 
+- [ ] change points_in_BBox to points_in_bbox
+
 | **module**                            | **name**              | **classes, methods and functions**     | **comments**              |
 |---------------------------------------|-----------------------|----------------------------------------|---------------------------|
 | modified PCA axis alignment           | pca_align             | - [ ] ...                              |                           |
@@ -38,24 +40,32 @@ The corner points are ordered in counter-clockwise order from bottom to the top.
 | level fitting                         | level_fitting         | - [ ] histogram                        |                           |
 |                                       |                       | - [ ] find peaks                       |                           |
 |                                       |                       | - [ ] ...                              |                           |
-| hypothesis based plane fitting and    | hysac                 | - [ ] fit plane svd                    |                           |
-| grouping                              |                       | - [ ] seeds                            |                           |
-|                                       |                       | - [ ] wall                             |                           |
-|                                       |                       | - [ ] ...                              |                           |
 | bounding box                          | bbox                  | - [X] *class: bbox*                    |                           |
-|                                       |                       | - [X] points in bbox                   |                           |
-|                                       |                       | - [X] order points                     |                           |
-|                                       |                       | - [X] rotate                           |                           |
-|                                       |                       | - [X] ... see code                     |                           |
-|                                       |                       | - [X] fit_horizontal_bounding_box      |                           |
+|                                       |                       | - [X] order_points                     |                           |
+|                                       |                       | - [X] points_in_bbox                   |                           |
+|                                       |                       | - [X] translate                        |                           |
+|                                       |                       | - [X] translate_z                      |                           |
+|                                       |                       | - [X] expand                           |                           |
+|                                       |                       | - [X] lower_edges                      |                           |
+|                                       |                       | - [X] length                           |                           |
+|                                       |                       | - [X] width                            |                           |
+|                                       |                       | - [X] height                           |                           |
+|                                       |                       | - [X] angle                            |                           |
+|                                       |                       | - [X] split_bounding_box               |                           |
+|                                       |                       | - [X] axis_align                       |                           |
+|                                       |                       | - [X] as_np_array                      |                           |
+|                                       |                       | - [X] get_endpts                       |                           |
+|                                       |                       | - [X] volume                           |                           |
+|                                       |                       | - [X] fit_axis_aligned                 |                           |
+|                                       |                       | - [X] fit_horizontal_aligned           |                           |
+|                                       |                       | - [ ] fit_minimal                      |                           |
+|                                       |                       | - [X] bbox_from_verts                  |                           |
 |                                       |                       | - [ ] ...                              |                           |
-|                                       |                       | - [ ] fit_minimal_bounding_box         | experimental              |
-|                                       |                       | - [ ]                                  |                           |
-|                                       |                       | - [ ] ...                              |                           |
-| visualization                         | visualization         | - [ ] points geometry                  |                           |
-|                                       |                       | - [ ] bbox geometry                    |                           |
-|                                       |                       | - [ ] plane geometry                   |                           |
-|                                       |                       | - [ ] visualize geometries             |                           |
+| visualization                         | visualization         | - [ ] points_cloud_geometry            |                           |
+|                                       |                       | - [ ] bbox_geometry                    |                           |
+|                                       |                       | - [ ] plane_geometry                   |                           |
+|                                       |                       | - [ ] visualize                        |                           |
 | Evalutation and metrics               | metrics               | - [ ] bbox_iou                         | hungarian algorithm, ...  |
 |                                       |                       | - [ ] volumetric_iou                   |                           |
+|                                       |                       | - [ ] voxel_iou                        |                           |
 |                                       |                       | - [ ] ...                              |                           |
