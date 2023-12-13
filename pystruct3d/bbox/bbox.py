@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from scipy.spatial import ConvexHull
 
@@ -7,6 +9,9 @@ class BBox:
 
     def __init__(self, corner_points=np.zeros((8, 3))) -> None:  # shape (8, 3)
         self.corner_points = corner_points
+        # ensure the corners are ordered as the BBox is initialized
+        if np.any(self.corner_points):
+            self.order_points()
 
     def __str__(self):
         string = f"Bounding Box with points {self.corner_points}"
@@ -79,6 +84,68 @@ class BBox:
         self.corner_points = np.dot(self.corner_points, rot_mat.T)
         # Translate the points back to the original position
         self.corner_points += center
+
+    def points_in_bbox_probability(self, points: np.ndarray):
+        def calculate_plane_normals():
+            n1 = np.cross(
+                self.corner_points[1] - self.corner_points[0],
+                self.corner_points[4] - self.corner_points[0],
+            )
+            n1 = n1 / np.linalg.norm(n1)
+            n2 = np.cross(
+                self.corner_points[2] - self.corner_points[1],
+                self.corner_points[5] - self.corner_points[1],
+            )
+            n2 = n2 / np.linalg.norm(n2)
+            n3 = np.cross(
+                self.corner_points[3] - self.corner_points[2],
+                self.corner_points[6] - self.corner_points[2],
+            )
+            n3 = n3 / np.linalg.norm(n3)
+            n4 = np.cross(
+                self.corner_points[0] - self.corner_points[3],
+                self.corner_points[7] - self.corner_points[3],
+            )
+            n4 = n4 / np.linalg.norm(n4)
+            n5 = np.cross(
+                self.corner_points[3] - self.corner_points[0],
+                self.corner_points[1] - self.corner_points[0],
+            )
+            n5 = n5 / np.linalg.norm(n5)
+            n6 = np.cross(
+                self.corner_points[5] - self.corner_points[4],
+                self.corner_points[7] - self.corner_points[4],
+            )
+            n6 = n6 / np.linalg.norm(n6)
+
+            return np.array([n1, n2, n3, n4, n5, n6])
+
+        normals = calculate_plane_normals()
+
+        def calculate_relative_position():
+            start = time.time()
+            p1 = np.dot(points - self.corner_points[0], normals[0])
+            p2 = np.dot(points - self.corner_points[1], normals[1])
+            p3 = np.dot(points - self.corner_points[2], normals[2])
+            p4 = np.dot(points - self.corner_points[3], normals[3])
+            p5 = np.dot(points - self.corner_points[0], normals[4])
+            p6 = np.dot(points - self.corner_points[4], normals[5])
+            print("dot ", time.time() - start)
+            start = time.time()
+            result = np.vstack((p1, p2, p3, p4, p5, p6)).T
+            print("stack ", time.time() - start)
+            # start = time.time()
+            # result = np.where(result > 0, 1, 0).T
+            # print("where ", time.time() - start)
+            return (result > 0).astype(int)
+
+        positions = calculate_relative_position()
+        print(positions)
+        start = time.time()
+        fin = np.where(~positions.any(axis=1))[0]
+        print("where2 ", time.time() - start)
+
+        return fin
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
