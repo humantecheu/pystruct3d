@@ -145,7 +145,7 @@ class BBox:
         fin = np.where(~positions.any(axis=1))[0]
         print("where2 ", time.time() - start)
 
-        return fin
+        return points[fin], fin
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
