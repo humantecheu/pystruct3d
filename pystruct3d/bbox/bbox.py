@@ -172,7 +172,7 @@ class BBox:
 
             # Get the actual points inside the box
             points_in_box = points[in_hull]
-            indices = np.where(in_hull == True)
+            indices = np.where(in_hull == True)[0]
 
             return points_in_box, indices
         except:
@@ -532,33 +532,30 @@ class BBox:
 
         # reshape to n, 3
         orig_shape = verts.shape[0]
-
         verts = verts.reshape((int(orig_shape / 3), 3))
-
         corner_pts = verts[verts[:, 2].argsort()]
+        # min, max and mean of XYZ
+        min_x = np.amin(corner_pts[:, 0])
+        max_x = np.amax(corner_pts[:, 0])
+        mean_x = (min_x + max_x) / 2
 
-        # remove points between min_z, max_z
+        min_y = np.amin(corner_pts[:, 1])
+        max_y = np.amax(corner_pts[:, 1])
+        mean_y = (min_y + max_y) / 2
+
         min_z = np.amin(corner_pts[:, 2])
         max_z = np.amax(corner_pts[:, 2])
-
-        rm_indices = np.where((corner_pts[:, 2] > min_z) & (corner_pts[:, 2] < max_z))
-        corner_pts = np.delete(corner_pts, rm_indices, axis=0)
-
-        # remove points on edges in between min and max points (could be door points etc.)
+        mean_z = (min_z + max_z) / 2
 
         # find centroid
-        # centrd = np.median(bbox, axis=0)
-        centrd = np.mean(corner_pts, axis=0)
+        centrd = np.asarray([mean_x, mean_y, mean_z])
 
         # find 8 points furthest away from centroid
-
         diffs = np.subtract(corner_pts, centrd)
-
         dists = np.linalg.norm(diffs, axis=1)
 
         # take 8 points with maximum distances to centroid
         corner_pts_idx = (-dists).argsort()[:8]
-
         corner_pts = corner_pts[corner_pts_idx]
 
         self.corner_points = corner_pts
