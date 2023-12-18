@@ -5,7 +5,7 @@ from scipy.spatial import ConvexHull
 
 
 class BBox:
-    """Class to represent bounding boxes by 8 corner points. Note that other classes exist to fit the bounding boxes to the data with specific methods."""
+    """Class to represent bounding boxes by 8 corner points."""
 
     def __init__(self, corner_points=np.zeros((8, 3))) -> None:  # shape (8, 3)
         self.corner_points = corner_points
@@ -147,7 +147,7 @@ class BBox:
 
         return points[fin], fin
 
-    def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
+    def points_in_bbox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
 
         Args:
@@ -560,3 +560,105 @@ class BBox:
 
         self.corner_points = corner_pts
         self.order_points()
+
+    def from_cv4aec(self, cv4aec_dict: dict):
+        """Create bounding boxes from cv4aec parameters
+
+        Args:
+            cv4aec_dict (dict): dictionary of wall, door or column parameter
+        """
+        # distinguish cases
+        # 1. case: start_pt, end_pt, width, height
+        if "start_pt" in cv4aec_dict:
+            start_pt = cv4aec_dict["start_pt"]
+            end_pt = cv4aec_dict["end_pt"]
+            width = cv4aec_dict["width"]
+            height = cv4aec_dict["height"]
+
+            start_vec = np.asarray(start_pt)
+            end_vec = np.asarray(end_pt)
+            center_dir = end_vec - start_vec
+
+            # we know that the base plane of the bounding box is horizontal
+            offset_dir = np.cross(center_dir, np.asarray([0, 0, 1]))
+            offset_norm = offset_dir / np.linalg.norm(offset_dir)
+            self.corner_points[0] = start_vec + 0.5 * width * offset_norm
+            self.corner_points[1] = start_vec - 0.5 * width * offset_norm
+            self.corner_points[2] = end_vec + 0.5 * width * offset_norm
+            self.corner_points[3] = end_vec - 0.5 * width * offset_norm
+            self.corner_points[4] = self.corner_points[0]
+            self.corner_points[5] = self.corner_points[1]
+            self.corner_points[6] = self.corner_points[2]
+            self.corner_points[7] = self.corner_points[3]
+            self.corner_points[:-4:, 2] += height
+            self.order_points()
+
+        elif "loc" in cv4aec_dict:
+            location = cv4aec_dict["loc"]
+            bx_width = cv4aec_dict["width"]
+            bx_depth = cv4aec_dict["depth"]
+            bx_height = cv4aec_dict["height"]
+            rotation = cv4aec_dict["rotation"]
+            print("ID:", cv4aec_dict["id"])
+            print("cv4aec location:", location)
+
+            loc_vec = np.asarray(location)
+            self.corner_points[0] = loc_vec - np.asarray(
+                [0.5 * bx_width, 0.5 * bx_depth, 0.0]
+            )
+            self.corner_points[1] = loc_vec + np.asarray(
+                [0.5 * bx_width, -0.5 * bx_depth, 0]
+            )
+            self.corner_points[2] = loc_vec + np.asarray(
+                [0.5 * bx_width, 0.5 * bx_depth, 0]
+            )
+            self.corner_points[3] = loc_vec + np.asarray(
+                [-0.5 * bx_width, 0.5 * bx_depth, 0]
+            )
+            self.corner_points[4] = self.corner_points[0]
+            self.corner_points[5] = self.corner_points[1]
+            self.corner_points[6] = self.corner_points[2]
+            self.corner_points[7] = self.corner_points[3]
+            self.corner_points[:-4:, 2] += bx_height
+            self.order_points()
+            if round(cv4aec_dict["rotation"], 0) != 0:
+                self.rotate(rotation)
+
+        else:
+            print("No valid key found, passing ...")
+
+    def to_cv4aec(self, output_style="start_pt", element_id="1", host_id="1"):
+        """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
+        Output_styles:
+        "start_pt": for walls
+        "loc" for doors and columns
+
+        Args:
+            output_style (str, optional): Either start_pt for walls or loc for doors and columns. Defaults to "start_pt".
+            element_id (str, optional): ID of element, IFC ID can be used. Defaults to "1".
+            host_id (str, optional): ID of host element. Defaults to "1".
+
+        Returns:
+            dict: Dictionary accourding to output style specified
+        """
+        if output_style == "loc":
+            data_dict = {
+                "id": element_id,
+                "width": self.length(),
+                "depth": self.width(),
+                "height": self.height(),
+                "loc": list(np.mean(self.corner_points[0:3], axis=0)),
+                "rotation": self.angle(),
+                "host_id": host_id,
+            }
+        elif output_style == "start_pt":
+            to_base_vec = 0.5 * self.corner_points[2] - self.corner_points[1]
+            data_dict = {
+                "id": element_id,
+                "start_pt": self.corner_points[0] + to_base_vec,
+                "end_pt": self.corner_points[1] + to_base_vec,
+                "width": self.width(),
+                "height": self.height(),
+            }
+
+        return data_dict

@@ -32,6 +32,7 @@ The corner points are ordered in counter-clockwise order from bottom to the top.
 # ToDo table
 
 - [ ] change points_in_BBox to points_in_bbox
+- [ ] implement from_cv4aec bbox method
 
 | **module**                            | **name**              | **classes, methods and functions**     | **comments**              |
 |---------------------------------------|-----------------------|----------------------------------------|---------------------------|
