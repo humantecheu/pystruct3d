@@ -58,12 +58,16 @@ class Visualization:
             sphere.paint_uniform_color([1, 0.706, 0])
             self.visu_list.append(sphere)
 
-    def visualize(self):
+    def clear(self):
+        """Clear visualization list"""
+        self.visu_list = []
+
+    def visualize(self, window_name="pystruct3D Visualizer"):
         """visualize list of geometries"""
         # open3d coordinate frame
         coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame()
         self.visu_list.append(coord_frame)
         if self.visu_list:
-            o3d.visualization.draw_geometries(self.visu_list)
+            o3d.visualization.draw_geometries(self.visu_list, window_name=window_name)
         else:
             print("Empty visulization list, did you create geometries?")
