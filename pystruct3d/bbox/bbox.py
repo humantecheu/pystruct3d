@@ -627,7 +627,7 @@ class BBox:
         else:
             print("No valid key found, passing ...")
 
-    def to_cv4aec(self, output_style="start_pt", element_id="1", host_id="1"):
+    def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0"):
         """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
         Output_styles:
         "start_pt": for walls
@@ -635,8 +635,8 @@ class BBox:
 
         Args:
             output_style (str, optional): Either start_pt for walls or loc for doors and columns. Defaults to "start_pt".
-            element_id (str, optional): ID of element, IFC ID can be used. Defaults to "1".
-            host_id (str, optional): ID of host element. Defaults to "1".
+            element_id (str, optional): ID of element, IFC ID can be used. Defaults to "0".
+            host_id (str, optional): ID of host element. Defaults to "0".
 
         Returns:
             dict: Dictionary accourding to output style specified
@@ -655,8 +655,8 @@ class BBox:
             to_base_vec = 0.5 * self.corner_points[2] - self.corner_points[1]
             data_dict = {
                 "id": element_id,
-                "start_pt": self.corner_points[0] + to_base_vec,
-                "end_pt": self.corner_points[1] + to_base_vec,
+                "start_pt": list(self.corner_points[0] + to_base_vec),
+                "end_pt": list(self.corner_points[1] + to_base_vec),
                 "width": self.width(),
                 "height": self.height(),
             }
