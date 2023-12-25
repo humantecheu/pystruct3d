@@ -10,7 +10,7 @@ from pystruct3d.bbox.point_bbox_metrics import (
 
 
 class BBox:
-    """Class to represent bounding boxes by 8 corner points. Note that other classes exist to fit the bounding boxes to the data with specific methods."""
+    """Class to represent bounding boxes by 8 corner points."""
 
     def __init__(self, corner_points=np.zeros((8, 3))) -> None:  # shape (8, 3)
         self.corner_points = corner_points
@@ -120,7 +120,7 @@ class BBox:
             indices = np.nonzero(~positive_direction.any(axis=0))  # [0].T
             return points[indices], indices, None
 
-    def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
+    def points_in_bbox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
 
         Args:
@@ -147,7 +147,7 @@ class BBox:
 
             # Get the actual points inside the box
             points_in_box = points[in_hull]
-            indices = np.where(in_hull == True)
+            indices = np.where(in_hull == True)[0]
 
             return points_in_box, indices
         except:
@@ -180,6 +180,43 @@ class BBox:
 
         self.corner_points[:4, 2] = min_zs
         self.corner_points[4:8, 2] = max_zs
+
+    def expand(self, offset):
+        """Expand the bounding box to either direction with a given offset"""
+        length_vector = self.corner_points[1] - self.corner_points[0]
+        length_vector_norm = length_vector / np.linalg.norm(length_vector)
+        widht_vector = self.corner_points[2] - self.corner_points[1]
+        width_vector_norm = widht_vector / np.linalg.norm(widht_vector)
+
+        length_offset = offset * length_vector_norm
+        width_offset = offset * width_vector_norm
+        height_offset = offset * np.asarray([0.0, 0.0, 1.0])
+
+        # apply vectors to points
+        self.corner_points[0] = (
+            self.corner_points[0] - length_offset - width_offset - height_offset
+        )
+        self.corner_points[1] = (
+            self.corner_points[1] + length_offset - width_offset - height_offset
+        )
+        self.corner_points[2] = (
+            self.corner_points[2] + length_offset + width_offset - height_offset
+        )
+        self.corner_points[3] = (
+            self.corner_points[3] - length_offset + width_offset - height_offset
+        )
+        self.corner_points[4] = (
+            self.corner_points[4] - length_offset - width_offset + height_offset
+        )
+        self.corner_points[5] = (
+            self.corner_points[5] + length_offset - width_offset + height_offset
+        )
+        self.corner_points[6] = (
+            self.corner_points[6] + length_offset + width_offset + height_offset
+        )
+        self.corner_points[7] = (
+            self.corner_points[7] - length_offset + width_offset + height_offset
+        )
 
     def lower_edges(self):
         lower_points = self.corner_points[:4]
@@ -470,34 +507,133 @@ class BBox:
 
         # reshape to n, 3
         orig_shape = verts.shape[0]
-
         verts = verts.reshape((int(orig_shape / 3), 3))
-
         corner_pts = verts[verts[:, 2].argsort()]
+        # min, max and mean of XYZ
+        min_x = np.amin(corner_pts[:, 0])
+        max_x = np.amax(corner_pts[:, 0])
+        mean_x = (min_x + max_x) / 2
 
-        # remove points between min_z, max_z
+        min_y = np.amin(corner_pts[:, 1])
+        max_y = np.amax(corner_pts[:, 1])
+        mean_y = (min_y + max_y) / 2
+
         min_z = np.amin(corner_pts[:, 2])
         max_z = np.amax(corner_pts[:, 2])
-
-        rm_indices = np.where((corner_pts[:, 2] > min_z) & (corner_pts[:, 2] < max_z))
-        corner_pts = np.delete(corner_pts, rm_indices, axis=0)
-
-        # remove points on edges in between min and max points (could be door points etc.)
+        mean_z = (min_z + max_z) / 2
 
         # find centroid
-        # centrd = np.median(bbox, axis=0)
-        centrd = np.mean(corner_pts, axis=0)
+        centrd = np.asarray([mean_x, mean_y, mean_z])
 
         # find 8 points furthest away from centroid
-
         diffs = np.subtract(corner_pts, centrd)
-
         dists = np.linalg.norm(diffs, axis=1)
 
         # take 8 points with maximum distances to centroid
         corner_pts_idx = (-dists).argsort()[:8]
-
         corner_pts = corner_pts[corner_pts_idx]
 
         self.corner_points = corner_pts
         self.order_points()
+
+    def from_cv4aec(self, cv4aec_dict: dict):
+        """Create bounding boxes from cv4aec parameters
+
+        Args:
+            cv4aec_dict (dict): dictionary of wall, door or column parameter
+        """
+        # distinguish cases
+        # 1. case: start_pt, end_pt, width, height
+        if "start_pt" in cv4aec_dict:
+            start_pt = cv4aec_dict["start_pt"]
+            end_pt = cv4aec_dict["end_pt"]
+            width = cv4aec_dict["width"]
+            height = cv4aec_dict["height"]
+
+            start_vec = np.asarray(start_pt)
+            end_vec = np.asarray(end_pt)
+            center_dir = end_vec - start_vec
+
+            # we know that the base plane of the bounding box is horizontal
+            offset_dir = np.cross(center_dir, np.asarray([0, 0, 1]))
+            offset_norm = offset_dir / np.linalg.norm(offset_dir)
+            self.corner_points[0] = start_vec + 0.5 * width * offset_norm
+            self.corner_points[1] = start_vec - 0.5 * width * offset_norm
+            self.corner_points[2] = end_vec + 0.5 * width * offset_norm
+            self.corner_points[3] = end_vec - 0.5 * width * offset_norm
+            self.corner_points[4] = self.corner_points[0]
+            self.corner_points[5] = self.corner_points[1]
+            self.corner_points[6] = self.corner_points[2]
+            self.corner_points[7] = self.corner_points[3]
+            self.corner_points[:-4:, 2] += height
+            self.order_points()
+
+        elif "loc" in cv4aec_dict:
+            location = cv4aec_dict["loc"]
+            bx_width = cv4aec_dict["width"]
+            bx_depth = cv4aec_dict["depth"]
+            bx_height = cv4aec_dict["height"]
+            rotation = cv4aec_dict["rotation"]
+            print("ID:", cv4aec_dict["id"])
+            print("cv4aec location:", location)
+
+            loc_vec = np.asarray(location)
+            self.corner_points[0] = loc_vec - np.asarray(
+                [0.5 * bx_width, 0.5 * bx_depth, 0.0]
+            )
+            self.corner_points[1] = loc_vec + np.asarray(
+                [0.5 * bx_width, -0.5 * bx_depth, 0]
+            )
+            self.corner_points[2] = loc_vec + np.asarray(
+                [0.5 * bx_width, 0.5 * bx_depth, 0]
+            )
+            self.corner_points[3] = loc_vec + np.asarray(
+                [-0.5 * bx_width, 0.5 * bx_depth, 0]
+            )
+            self.corner_points[4] = self.corner_points[0]
+            self.corner_points[5] = self.corner_points[1]
+            self.corner_points[6] = self.corner_points[2]
+            self.corner_points[7] = self.corner_points[3]
+            self.corner_points[:-4:, 2] += bx_height
+            self.order_points()
+            if round(cv4aec_dict["rotation"], 0) != 0:
+                self.rotate(rotation)
+
+        else:
+            print("No valid key found, passing ...")
+
+    def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0"):
+        """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
+        Output_styles:
+        "start_pt": for walls
+        "loc" for doors and columns
+
+        Args:
+            output_style (str, optional): Either start_pt for walls or loc for doors and columns. Defaults to "start_pt".
+            element_id (str, optional): ID of element, IFC ID can be used. Defaults to "0".
+            host_id (str, optional): ID of host element. Defaults to "0".
+
+        Returns:
+            dict: Dictionary accourding to output style specified
+        """
+        if output_style == "loc":
+            data_dict = {
+                "id": element_id,
+                "width": self.length(),
+                "depth": self.width(),
+                "height": self.height(),
+                "loc": list(np.mean(self.corner_points[0:3], axis=0)),
+                "rotation": self.angle(),
+                "host_id": host_id,
+            }
+        elif output_style == "start_pt":
+            to_base_vec = 0.5 * self.corner_points[2] - self.corner_points[1]
+            data_dict = {
+                "id": element_id,
+                "start_pt": list(self.corner_points[0] + to_base_vec),
+                "end_pt": list(self.corner_points[1] + to_base_vec),
+                "width": self.width(),
+                "height": self.height(),
+            }
+
+        return data_dict

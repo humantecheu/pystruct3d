@@ -1,41 +1,82 @@
-import numpy as np
 from typing import List, Tuple
 
-def voxelize_pointcloud(
-        pointcloud: np.ndarray,
-        volume_limits: Tuple[np.ndarray, np.ndarray],
-        voxel_size: float
-    ) -> np.ndarray:
+import numpy as np
+
+from pystruct3d.bbox.bbox import BBox
+from pystruct3d.metrics.generate_example import create_bbox_lists
+from pystruct3d.metrics.voxelization_limits import voxelization_limits
+# from pystruct3d.visualization.visualization import Visualization
+
+
+def voxelize_bbox(
+    bbox: BBox,
+    volume_limits: Tuple[np.ndarray, np.ndarray],
+    voxel_size: float,
+):
+    """_summary_
+
+    Args:
+        bbox (BBox): _description_
+        volume_limits (Tuple[np.ndarray, np.ndarray]): _description_
+        voxel_size (float): _description_
+    """
     min_vals, max_vals = volume_limits
-    indices = ((pointcloud - min_vals) / voxel_size).astype(int)
     volume_dims = np.ceil((max_vals - min_vals) / voxel_size).astype(int)
+
     x_dim = volume_dims[0]
     y_dim = volume_dims[1]
-    
+
+    bbox_min, bbox_max = voxelization_limits(bbox)
+
+    # Define voxel grid ranges
+    x_range = np.arange(bbox_min[0], bbox_max[0], voxel_size) + voxel_size / 2
+    y_range = np.arange(bbox_min[1], bbox_max[1], voxel_size) + voxel_size / 2
+    z_range = np.arange(bbox_min[2], bbox_max[2], voxel_size) + voxel_size / 2
+
+    # Create a 3D grid of midpoints
+    x, y, z = np.meshgrid(x_range, y_range, z_range, indexing="ij")
+    midpoints = np.stack((x, y, z), axis=-1).reshape(-1, 3)
+
+    # Check which midpoints are inside the convex hull
+    points_in_bbox, _ = bbox.points_in_BBox(midpoints)
+    indices = ((points_in_bbox - min_vals) / voxel_size).astype(int)
+
+    # fmt: off
     unravelled_indices = (
         indices[:, 2] * x_dim * y_dim +
         indices[:, 1] * x_dim +
         indices[:, 0]
     )
-    
+    # fmt: on
+
+    # vis = Visualization()
+    # vis.bbox_geometry(bbox)
+    # vis.point_cloud_geometry(points_in_bbox)
+    # vis.visualize()
+
     return np.unique(unravelled_indices)
 
-def volumetric_iou(
-        groundtruth_pc: np.ndarray,
-        predicted_pc: np.ndarray,
-        voxel_size: float=0.01
-    ) -> Tuple[float, float]:
-    min_vals = np.floor(
-        np.minimum(np.min(groundtruth_pc, axis=0), np.min(predicted_pc, axis=0))
-        ).astype(int)
-    max_vals = np.ceil(
-        np.maximum(np.max(groundtruth_pc, axis=0), np.max(predicted_pc, axis=0))
-        ).astype(int)
-    volume_limits = (min_vals, max_vals)
 
-    groundtruth_indices = voxelize_pointcloud(groundtruth_pc, volume_limits, voxel_size)
-    predicted_indices = voxelize_pointcloud(predicted_pc, volume_limits, voxel_size)
-    
+def volumetric_iou(
+    groundtruth_bboxes: List[BBox],
+    predicted_bboxes: List[BBox],
+    volume_limits: Tuple[np.ndarray, np.ndarray] = None,
+    voxel_size: float = 0.01,
+):
+    if volume_limits is None:
+        volume_limits = voxelization_limits(groundtruth_bboxes, predicted_bboxes)
+
+    groundtruth_indices = np.array([])
+    for bbox in groundtruth_bboxes:
+        groundtruth_indices = np.union1d(
+            groundtruth_indices, voxelize_bbox(bbox, volume_limits, voxel_size)
+        )
+    predicted_indices = np.array([])
+    for bbox in predicted_bboxes:
+        predicted_indices = np.union1d(
+            predicted_indices, voxelize_bbox(bbox, volume_limits, voxel_size)
+        )
+
     len_intersect = len(np.intersect1d(groundtruth_indices, predicted_indices))
     len_union = len(np.union1d(groundtruth_indices, predicted_indices))
 
@@ -43,28 +84,32 @@ def volumetric_iou(
     num_gt_voxels = len(groundtruth_indices)
     return iou, num_gt_voxels
 
+
 def mean_volumetric_iou(classes_iou: List[Tuple[float, float]]) -> float:
+    """_summary_
+
+    Args:
+        classes_iou (List[Tuple[float, float]]): _description_
+
+    Returns:
+        float: _description_
+    """
     total_gt_voxels = 0
     for _, gt_voxels in classes_iou:
         total_gt_voxels += gt_voxels
 
     miou = 0
     for iou, gt_voxels in classes_iou:
-        miou += (iou * gt_voxels / total_gt_voxels)
-    
+        miou += iou * gt_voxels / total_gt_voxels
+
     return miou
 
-def main() -> None:
-    classes_iou = []
-    for i in range(1, 4):
-        # Generate two random point clouds with points in a 3D space ranging from [0, 20]
-        pointcloud1 = np.random.uniform(low=0.0, high=20.0, size=(i * 1000000, 3))
-        pointcloud2 = np.random.uniform(low=0.0, high=20.0, size=(i * 800000, 3))
-        classes_iou.append(volumetric_iou(pointcloud1, pointcloud2, 0.1))
-        print(f"Class_{i} IoU: {classes_iou[-1][0]}")
-    
-    print(f"mIoU: {mean_volumetric_iou(classes_iou)}")
-    
+
+def main():
+    bboxes_1, bboxes_2 = create_bbox_lists()
+    bboxes_1[0].rotate(30)
+    volumetric_iou(bboxes_1, bboxes_2)
+
 
 if __name__ == "__main__":
     main()
