@@ -3,6 +3,11 @@ import time
 import numpy as np
 from scipy.spatial import ConvexHull
 
+from pystruct3d.bbox.point_bbox_metrics import (
+    calculate_distances,
+    calculate_relative_position,
+)
+
 
 class BBox:
     """Class to represent bounding boxes by 8 corner points. Note that other classes exist to fit the bounding boxes to the data with specific methods."""
@@ -85,67 +90,35 @@ class BBox:
         # Translate the points back to the original position
         self.corner_points += center
 
-    def points_in_bbox_probability(self, points: np.ndarray):
-        def calculate_plane_normals():
-            n1 = np.cross(
-                self.corner_points[1] - self.corner_points[0],
-                self.corner_points[4] - self.corner_points[0],
+    def points_in_bbox_probability(
+        self,
+        points: np.ndarray,
+        probability_threshold=0,
+    ):
+        def calculate_pdf():
+            shortest_distance = calculate_distances(
+                points,
+                plane_distances,
+                positive_direction,
+                self.corner_points,
             )
-            n1 = n1 / np.linalg.norm(n1)
-            n2 = np.cross(
-                self.corner_points[2] - self.corner_points[1],
-                self.corner_points[5] - self.corner_points[1],
-            )
-            n2 = n2 / np.linalg.norm(n2)
-            n3 = np.cross(
-                self.corner_points[3] - self.corner_points[2],
-                self.corner_points[6] - self.corner_points[2],
-            )
-            n3 = n3 / np.linalg.norm(n3)
-            n4 = np.cross(
-                self.corner_points[0] - self.corner_points[3],
-                self.corner_points[7] - self.corner_points[3],
-            )
-            n4 = n4 / np.linalg.norm(n4)
-            n5 = np.cross(
-                self.corner_points[3] - self.corner_points[0],
-                self.corner_points[1] - self.corner_points[0],
-            )
-            n5 = n5 / np.linalg.norm(n5)
-            n6 = np.cross(
-                self.corner_points[5] - self.corner_points[4],
-                self.corner_points[7] - self.corner_points[4],
-            )
-            n6 = n6 / np.linalg.norm(n6)
+            sigma = self.width() / 2
+            return np.exp(-0.5 * ((shortest_distance / sigma) ** 2))
 
-            return np.array([n1, n2, n3, n4, n5, n6])
-
-        normals = calculate_plane_normals()
-
-        def calculate_relative_position():
-            start = time.time()
-            p1 = np.dot(points - self.corner_points[0], normals[0])
-            p2 = np.dot(points - self.corner_points[1], normals[1])
-            p3 = np.dot(points - self.corner_points[2], normals[2])
-            p4 = np.dot(points - self.corner_points[3], normals[3])
-            p5 = np.dot(points - self.corner_points[0], normals[4])
-            p6 = np.dot(points - self.corner_points[4], normals[5])
-            print("dot ", time.time() - start)
-            start = time.time()
-            result = np.vstack((p1, p2, p3, p4, p5, p6)).T
-            print("stack ", time.time() - start)
-            # start = time.time()
-            # result = np.where(result > 0, 1, 0).T
-            # print("where ", time.time() - start)
-            return (result > 0).astype(int)
-
-        positions = calculate_relative_position()
-        print(positions)
-        start = time.time()
-        fin = np.where(~positions.any(axis=1))[0]
-        print("where2 ", time.time() - start)
-
-        return fin
+        plane_distances, positive_direction = calculate_relative_position(
+            points,
+            self.corner_points,
+            probability_threshold > 0,
+        )
+        if probability_threshold > 0:
+            pdf = calculate_pdf()
+            indices = (pdf > probability_threshold).squeeze()
+            return points[indices], indices, pdf
+        else:
+            # A point which is "below" all planes falls inside the bbox
+            # indices = np.where(~positive_direction.any(axis=0))  # [0].T
+            indices = np.nonzero(~positive_direction.any(axis=0))  # [0].T
+            return points[indices], indices, None
 
     def points_in_BBox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
@@ -164,6 +137,8 @@ class BBox:
             hull = ConvexHull(self.corner_points)
 
             # Get array of boolean values indicating in hull if True
+            # print(np.dot(points, hull.equations[:, :-1].T).shape)
+            # exit()
             in_hull = np.all(
                 np.add(np.dot(points, hull.equations[:, :-1].T), hull.equations[:, -1])
                 <= tolerance,
