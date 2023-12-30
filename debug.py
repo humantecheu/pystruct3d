@@ -19,18 +19,37 @@ def main():
             [0.0, 1.0, 3.0],
         ]
     )
+
+    door_points = np.array(
+        [
+            [1.0, -0.2, 1.0],
+            [2.0, -0.2, 1.0],
+            [2.0, 0.4, 1.0],
+            [1.0, 0.4, 1.0],
+            [1.0, -0.2, 2.0],
+            [2.0, -0.2, 2.0],
+            [2.0, 0.4, 2.0],
+            [1.0, 0.4, 2.0],
+        ]
+    )
     # pointer issues, need to copy the sample points
 
-    ref_box = bbox.BBox(sample_points)
-    inliers, indices = ref_box.points_in_bbox(rand_pts)
+    wall_box = bbox.BBox(sample_points)
+    wall_box.rotate(20)
+    print("wall box width", wall_box.width())
+    door_ref_box = bbox.BBox(door_points)
+    door_ref_box.rotate(20)
+    door_box = bbox.BBox(door_points)
+    door_box.rotate(20)
+
+    door_box.project_into_parent(wall_box)
 
     # inliers = rand_pts[indices]
 
     visu = visualization.Visualization()
-
-    visu.bbox_geometry(ref_box)
-
-    visu.point_cloud_geometry(inliers)
+    visu.bbox_geometry(door_ref_box, [0.0, 0.0, 1.0])
+    visu.bbox_geometry(wall_box)
+    visu.bbox_geometry(door_box, [1.0, 0.75, 0.0])
 
     visu.visualize()
 

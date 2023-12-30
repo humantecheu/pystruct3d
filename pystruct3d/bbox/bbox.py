@@ -309,7 +309,7 @@ class BBox:
 
         return height
 
-    def angle(self):
+    def angle(self) -> float:
         """Returns the counter-clockwise angle of the bounding box to the x-axis.
 
         Returns:
@@ -324,6 +324,53 @@ class BBox:
         angle = (angle + 360) % 360
 
         return angle
+
+    def project_into_parent(self, parent_bbox):
+        """Project bounding box into parent bounding box e.g., door bounding box
+        into parent wall. Projection is based on the parent normal, assuming
+        that child objects can only be projected along the width i.e., along the main
+        surfaces of the parent bounding box.
+        Results in the child of same width as parent, surfaces flush to the parents'
+        ones. Other dimensions of child might differ slightly if the child is
+        rotated onto the parent due to projection.
+
+        Args:
+            parent_bbox (bbox): bounding box object of parent
+        """
+        # translate to closest surface
+        # Get plane equation ax + by + cz + d = 0
+        # get normal vector from parent and normalize
+        # no need to calculate normal
+        wv = parent_bbox.corner_points[3] - parent_bbox.corner_points[0]
+        nv = wv / np.linalg.norm(wv)
+        # calculate d: sum of (normal vector x point on plane)
+        d1 = np.sum(nv * parent_bbox.corner_points[0])
+        d2 = np.sum(nv * parent_bbox.corner_points[3])
+
+        nv_matr = np.tile(nv, (8, 1))
+        d1_matr = np.tile(-d1, (8, 1))
+        d2_matr = np.tile(-d2, (8, 1))
+        print(d2_matr)
+        # find closest surface
+        # distance of point(r, s, u) to plane = |ar + bs + cu + d|
+        dist1 = np.sum(np.hstack((self.corner_points * nv_matr, d1_matr)), axis=1)
+        dist2 = np.sum(np.hstack((self.corner_points * nv_matr, d2_matr)), axis=1)
+
+        print(dist1, dist2)
+        mean_dist1 = np.mean(np.abs(dist1))
+        mean_dist2 = np.mean(np.abs(dist2))
+        min_mean = np.argmin(np.asarray(mean_dist1, mean_dist2))
+        print(min_mean)
+        # transform points to surface and surface + parent width respectively
+        if min_mean == 0:
+            translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
+        else:
+            translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
+        print("translation:", translation)
+        self.corner_points += translation
+        self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
+
+        pass
 
     def split_bounding_box(self):
         """Splits the bounding box into two. Modifies self, returns the other box
