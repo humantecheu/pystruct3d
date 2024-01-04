@@ -19,8 +19,9 @@ class BBox:
 
     def order_points(self):
         """
-        Orders the points of a 3D bounding box aligned with the z-axis in a counter-clockwise direction
-        starting from the left-most point.
+        Orders the points of a 3D bounding box aligned with the z-axis in
+        counter-clockwise direction, with condition that edge [0] - [1]
+        is along the length == longer horizontal dimension
         """
         # Split points into two groups based on the z-coordinate
         self.corner_points = self.corner_points[self.corner_points[:, 2].argsort()]
@@ -49,9 +50,33 @@ class BBox:
             )
         ]
 
-        # Combine the ordered points
-        ordered_points = np.vstack((lower_points, upper_points))
-        self.corner_points = ordered_points
+        # BUG: enforce min x / y point to be at [0]
+        # fix, but still breaks near 180 degrees
+
+        # check if edge [0] - [1] is longer than [1] - [2]
+        len_edge01 = np.linalg.norm(lower_points[1] - lower_points[0])
+        len_edge12 = np.linalg.norm(lower_points[2] - lower_points[1])
+        if len_edge01 < len_edge12:
+            # change order += 1 i.e. shift point at index 0 to index 1 at lower and upper
+            lower_points = np.roll(lower_points, shift=1, axis=0)
+            upper_points = np.roll(upper_points, shift=1, axis=0)
+            ordered_points = np.vstack((lower_points, upper_points))
+            self.corner_points = ordered_points
+        else:
+            ordered_points = np.vstack((lower_points, upper_points))
+            self.corner_points = ordered_points
+
+        if (
+            lower_points[0, 0] > lower_points[1, 0]
+            or lower_points[0, 1] > lower_points[1, 1]
+        ):
+            lower_points = np.roll(lower_points, shift=2, axis=0)
+            upper_points = np.roll(upper_points, shift=2, axis=0)
+            ordered_points = np.vstack((lower_points, upper_points))
+            self.corner_points = ordered_points
+        else:
+            ordered_points = np.vstack((lower_points, upper_points))
+            self.corner_points = ordered_points
 
     def rotate(self, angle: float):  # angle in degrees
         """Rotates the bounding box counter-clockwise around the z-axis and the bounding box center
@@ -321,8 +346,9 @@ class BBox:
 
         rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
         angle = np.rad2deg(rad_angle)
-        angle = (angle + 360) % 360
-
+        # force angle between 0 and 180
+        angle = (angle + 180) % 180
+        # angle = (angle + 360) % 360
         return angle
 
     def project_into_parent(self, parent_bbox):
@@ -337,6 +363,8 @@ class BBox:
         Args:
             parent_bbox (bbox): bounding box object of parent
         """
+        # TODO: check intersecting
+        print("-- project bounding box into parent")
         # translate to closest surface
         # Get plane equation ax + by + cz + d = 0
         # get normal vector from parent and normalize
@@ -350,52 +378,46 @@ class BBox:
         nv_matr = np.tile(nv, (8, 1))
         d1_matr = np.tile(-d1, (8, 1))
         d2_matr = np.tile(-d2, (8, 1))
-        print(d2_matr)
         # find closest surface
         # distance of point(r, s, u) to plane = |ar + bs + cu + d|
         dist1 = np.sum(np.hstack((self.corner_points * nv_matr, d1_matr)), axis=1)
         dist2 = np.sum(np.hstack((self.corner_points * nv_matr, d2_matr)), axis=1)
-
-        print(dist1, dist2)
         mean_dist1 = np.mean(np.abs(dist1))
         mean_dist2 = np.mean(np.abs(dist2))
         min_mean = np.argmin(np.asarray(mean_dist1, mean_dist2))
-        print(min_mean)
         # transform points to surface and surface + parent width respectively
         if min_mean == 0:
             translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
         else:
             translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
-        print("translation:", translation)
         self.corner_points += translation
         self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
+        self.order_points()
 
-        pass
-
-    def split_bounding_box(self):
+    def split_bounding_box(self, offset=0.2):
         """Splits the bounding box into two. Modifies self, returns the other box
 
         Returns:
             BBox: other bounding box
         """
-        # take all lower points, calculate edge lengths, return largest as length
+        # get lower edges
         edges = self.lower_edges()
-        lengths = np.linalg.norm(edges, axis=1)
-        longest_idx = np.argmax(lengths)
         half_edges = edges / 2
 
         # calculate the transformation matrix
-        transform = half_edges[longest_idx]
+        transform = half_edges[1] + offset * half_edges[1] / np.linalg.norm(
+            half_edges[1]
+        )
 
         transform_mat = np.zeros((8, 3))
         transform_mat[[1, 2, 5, 6]] = transform
+        # transform self
+        self.corner_points += transform_mat
 
         other_transform_mat = np.zeros((8, 3))
         other_transform_mat[::] = transform
 
-        self.corner_points += transform_mat
-
-        # add other box
+        # add other box and transform
         other_points = np.copy(self.corner_points)
         other_points -= other_transform_mat
         other_box = BBox(other_points)
@@ -549,6 +571,7 @@ class BBox:
             min_box_points, np.linalg.inv(rotation_matrices[min_idx]).T
         )
         self.corner_points = min_box_points
+        self.order_points()
 
         return self
 

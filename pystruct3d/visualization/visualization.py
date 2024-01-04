@@ -45,7 +45,7 @@ class Visualization:
         # append to Visualization list
         self.visu_list.append(bounding_box)
 
-    def points_geometry(self, points):
+    def points_geometry(self, points, color=[1, 0.706, 0]):
         """visualize few points e.g., endpoints
 
         Args:
@@ -55,7 +55,7 @@ class Visualization:
         for pt in points:
             sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.1)
             sphere.translate(pt)
-            sphere.paint_uniform_color([1, 0.706, 0])
+            sphere.paint_uniform_color(color)
             self.visu_list.append(sphere)
 
     def clear(self):
