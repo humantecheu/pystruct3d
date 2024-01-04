@@ -33,25 +33,30 @@ def main():
         ]
     )
     # pointer issues, need to copy the sample points
+    i = 0
+    for i in range(0, 360, 5):
+        wall_box = bbox.BBox(sample_points)
+        wall_box.rotate(i)
+        split_box = wall_box.split_bounding_box(offset=0.5)
 
-    wall_box = bbox.BBox(sample_points)
-    wall_box.rotate(20)
-    print("wall box width", wall_box.width())
-    door_ref_box = bbox.BBox(door_points)
-    door_ref_box.rotate(20)
-    door_box = bbox.BBox(door_points)
-    door_box.rotate(20)
+        wall_box.order_points()
+        # print("wall box width", wall_box.width())
+        # door_ref_box = bbox.BBox(door_points)
+        # door_ref_box.rotate(i)
+        # door_box = bbox.BBox(door_points)
+        # door_box.rotate(i)
 
-    door_box.project_into_parent(wall_box)
+        # door_box.project_into_parent(wall_box)
 
-    # inliers = rand_pts[indices]
+        # # inliers = rand_pts[indices]
 
-    visu = visualization.Visualization()
-    visu.bbox_geometry(door_ref_box, [0.0, 0.0, 1.0])
-    visu.bbox_geometry(wall_box)
-    visu.bbox_geometry(door_box, [1.0, 0.75, 0.0])
+        visu = visualization.Visualization()
+        # visu.bbox_geometry(door_ref_box, [0.0, 0.0, 1.0])
+        visu.bbox_geometry(wall_box)
+        visu.bbox_geometry(split_box, [1.0, 0.75, 0.0])
+        # visu.bbox_geometry(door_box, [1.0, 0.75, 0.0])
 
-    visu.visualize()
+        visu.visualize()
 
 
 if __name__ == "__main__":
