@@ -1,4 +1,5 @@
 import open3d as o3d
+from pystruct3d.bbox.bbox import BBox
 
 
 class Visualization:
@@ -18,32 +19,41 @@ class Visualization:
         # append to Visualization list
         self.visu_list.append(pcd)
 
-    def bbox_geometry(self, bounding_box, color=[0, 1, 0]):
+    def bbox_geometry(self, bboxes: list[BBox], color=[0, 1, 0]):
         """creates an open3d line set from a bounding box. Points should be ordered!
 
         Args:
             bounding_box (bbox): bbox object
             color (list, optional): RGB color, list in range of 0, 1. Defaults to [0, 1, 0].
         """
-        corner_points_array = bounding_box.as_np_array()
-        # Lines are represented as pairs of indices referencing the list of points (i.e., the corners of the box)
-        # fmt:off
-        lines = [
-            [0, 1], [1, 2], [2, 3], [3, 0],  # Bottom edges
-            [4, 5], [5, 6], [6, 7], [7, 4],  # Top edges
-            [0, 4], [1, 5], [2, 6], [3, 7]   # Side edges
-            ]
-        # fmt:on
-        colors = [color for i in range(len(lines))]
-        # initialize line set with the corner points
-        bounding_box = o3d.geometry.LineSet()
-        bounding_box.points = o3d.utility.Vector3dVector(
-            corner_points_array
-        )  # Flatten the points
-        bounding_box.lines = o3d.utility.Vector2iVector(lines)
-        bounding_box.colors = o3d.utility.Vector3dVector(colors)
-        # append to Visualization list
-        self.visu_list.append(bounding_box)
+
+        def visualize_bbox(bx: BBox) -> None:
+            corner_points_array = bx.as_np_array()
+            # Lines are represented as pairs of indices referencing the list of points (i.e., the corners of the box)
+            # fmt:off
+            lines = [
+                [0, 1], [1, 2], [2, 3], [3, 0],  # Bottom edges
+                [4, 5], [5, 6], [6, 7], [7, 4],  # Top edges
+                [0, 4], [1, 5], [2, 6], [3, 7]   # Side edges
+                ]
+            # fmt:on
+            colors = [color for i in range(len(lines))]
+            # initialize line set with the corner points
+            bounding_box = o3d.geometry.LineSet()
+            bounding_box.points = o3d.utility.Vector3dVector(
+                corner_points_array
+            )  # Flatten the points
+            bounding_box.lines = o3d.utility.Vector2iVector(lines)
+            bounding_box.colors = o3d.utility.Vector3dVector(colors)
+            # append to Visualization list
+            self.visu_list.append(bounding_box)
+
+        # handle exception so that it accepts Bbox objects as well.
+        try:
+            for box in bboxes:
+                visualize_bbox(box)
+        except TypeError:
+            visualize_bbox(bboxes)
 
     def points_geometry(self, points, color=[1, 0.706, 0]):
         """visualize few points e.g., endpoints
