@@ -55,12 +55,11 @@ class BBox:
             )
         ]
 
-        # BUG: enforce min x / y point to be at [0]
-        # fix, but still breaks near 180 degrees
-
+        # BUG
         # check if edge [0] - [1] is longer than [1] - [2]
         len_edge01 = np.linalg.norm(lower_points[1] - lower_points[0])
         len_edge12 = np.linalg.norm(lower_points[2] - lower_points[1])
+
         if len_edge01 < len_edge12:
             # change order += 1 i.e. shift point at index 0 to index 1 at lower and upper
             lower_points = np.roll(lower_points, shift=1, axis=0)
@@ -70,7 +69,7 @@ class BBox:
         else:
             ordered_points = np.vstack((lower_points, upper_points))
             self.corner_points = ordered_points
-
+        # enforce min x / y point to be at [0]
         if (
             lower_points[0, 0] > lower_points[1, 0]
             or lower_points[0, 1] > lower_points[1, 1]
@@ -82,6 +81,12 @@ class BBox:
         else:
             ordered_points = np.vstack((lower_points, upper_points))
             self.corner_points = ordered_points
+        if self.angle() == 0.0:
+            if lower_points[0, 0] > lower_points[1, 0]:
+                lower_points = np.roll(lower_points, shift=2, axis=0)
+                upper_points = np.roll(upper_points, shift=2, axis=0)
+                ordered_points = np.vstack((lower_points, upper_points))
+                self.corner_points = ordered_points
 
     def rotate(self, angle: float):  # angle in degrees
         """Rotates the bounding box counter-clockwise around the z-axis and the bounding box center
@@ -114,6 +119,7 @@ class BBox:
         self.corner_points = np.dot(self.corner_points, rot_mat.T)
         # Translate the points back to the original position
         self.corner_points += center
+        self.order_points()
 
     def points_in_bbox_probability(
         self,
@@ -322,6 +328,8 @@ class BBox:
         rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
         angle = np.rad2deg(rad_angle)
         # force angle between 0 and 180
+        # if angle != 180:
+        #     angle = (angle + 180) % 180
         angle = (angle + 180) % 180
         # angle = (angle + 360) % 360
         return angle
@@ -338,7 +346,8 @@ class BBox:
         Args:
             parent_bbox (bbox): bounding box object of parent
         """
-        # TODO: check intersecting
+        # rotate bounding box first same angle as parent
+        self.rotate(np.negative(self.angle() - parent_bbox.angle()))
         print("-- project bounding box into parent")
         # translate to closest surface
         # Get plane equation ax + by + cz + d = 0
@@ -361,10 +370,11 @@ class BBox:
         mean_dist2 = np.mean(np.abs(dist2))
         min_mean = np.argmin(np.asarray(mean_dist1, mean_dist2))
         # transform points to surface and surface + parent width respectively
-        if min_mean == 0:
-            translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
-        else:
-            translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
+        translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
+        # if min_mean == 0:
+        #     translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
+        # else:
+        #     translation = nv_matr * np.negative(np.tile(dist2, (3, 1)).T)  # dist1
         self.corner_points += translation
         self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
         self.order_points()
@@ -443,6 +453,37 @@ class BBox:
 
         return endpts
 
+    def get_center_plane(self):
+
+        width_vector = self.corner_points[3] - self.corner_points[0]
+        plane_normal = width_vector / np.linalg.norm(width_vector)
+
+        plane_point = self.corner_points[0] + 0.5 * width_vector
+
+        # plane equation: ax + by + cx + d = 0
+
+        d = np.negative(np.sum(plane_normal * plane_point))
+
+        plane_equation = np.append(plane_normal, d)
+        print(plane_equation)
+
+        return plane_equation
+
+    def get_side_planes(self):
+
+        width_vector = self.corner_points[3] - self.corner_points[0]
+        plane_normal = width_vector / np.linalg.norm(width_vector)
+
+        # plane equation: ax + by + cx + d = 0
+
+        d1 = np.negative(np.sum(plane_normal * self.corner_points[0]))
+        d2 = np.negative(np.sum(plane_normal * self.corner_points[3]))
+
+        plane_equation1 = np.append(plane_normal, d1)
+        plane_equation2 = np.append(plane_normal, d2)
+
+        return plane_equation1, plane_equation2
+
     def volume(self):
         """calculate the volume of the bounding box
 
@@ -500,11 +541,11 @@ class BBox:
         # print(f"conv_hull_points{conv_hull_points.shape}")
 
         edges_xy = np.diff(conv_hull_points, axis=1).reshape(-1, 2)
-        print(edges_xy.shape)
+        # print(edges_xy.shape)
 
         angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
 
-        print(np.rad2deg(angles))
+        # print(np.rad2deg(angles))
         candidate_volumes = np.array([])
         rotation_matrices = np.empty((0, 3, 3))
         candidate_boxes = np.empty((0, 8, 3))
@@ -537,8 +578,8 @@ class BBox:
             cand_volume = box_canidate.volume()
             candidate_volumes = np.append(candidate_volumes, cand_volume)
 
-        print(candidate_volumes)
-        print(f"shape of rot matrices, {rotation_matrices.shape}")
+        # print(candidate_volumes)
+        # print(f"shape of rot matrices, {rotation_matrices.shape}")
 
         min_idx = np.argmin(candidate_volumes)
         min_box_points = candidate_boxes[min_idx]
