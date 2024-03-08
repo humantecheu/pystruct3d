@@ -543,61 +543,67 @@ class BBox:
         """
         # delete 0s from Z dimension
         points2d = points[:, :2]
-        #
-        hull = ConvexHull(points2d)
 
-        conv_hull_points = points2d[hull.simplices]
+        try:
+            hull = ConvexHull(points2d)
 
-        # print(f"conv_hull_points{conv_hull_points.shape}")
+            conv_hull_points = points2d[hull.simplices]
 
-        edges_xy = np.diff(conv_hull_points, axis=1).reshape(-1, 2)
-        # print(edges_xy.shape)
+            # print(f"conv_hull_points{conv_hull_points.shape}")
 
-        angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
+            edges_xy = np.diff(conv_hull_points, axis=1).reshape(-1, 2)
+            # print(edges_xy.shape)
 
-        # print(np.rad2deg(angles))
-        candidate_volumes = np.array([])
-        rotation_matrices = np.empty((0, 3, 3))
-        candidate_boxes = np.empty((0, 8, 3))
-        for angle in angles:
-            # Create a rotation matrix for the specified angle and axis
-            axis = np.array([0, 0, 1])
-            c = np.cos(angle)
-            s = np.sin(angle)
-            t = 1 - c
-            axis = axis / np.linalg.norm(axis)
-            x, y, z = axis
-            # fmt:off
-            rot_mat = np.array(
-                [
-                    [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
-                    [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
-                    [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
-                ]
+            angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
+
+            # print(np.rad2deg(angles))
+            candidate_volumes = np.array([])
+            rotation_matrices = np.empty((0, 3, 3))
+            candidate_boxes = np.empty((0, 8, 3))
+            for angle in angles:
+                # Create a rotation matrix for the specified angle and axis
+                axis = np.array([0, 0, 1])
+                c = np.cos(angle)
+                s = np.sin(angle)
+                t = 1 - c
+                axis = axis / np.linalg.norm(axis)
+                x, y, z = axis
+                # fmt:off
+                rot_mat = np.array(
+                    [
+                        [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
+                        [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
+                        [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
+                    ]
+                )
+                rotation_matrices = np.vstack((rotation_matrices, rot_mat.reshape(1, 3, 3)))
+                # fmt:on
+                # apply the rotation
+                rot_points = np.dot(points, rot_mat.T)
+
+                # fit axis aligned bounding box
+                box_canidate = BBox()
+                box_canidate.fit_axis_aligned(rot_points)
+                box_points = box_canidate.corner_points
+                candidate_boxes = np.vstack(
+                    (candidate_boxes, box_points.reshape(1, 8, 3))
+                )
+                cand_volume = box_canidate.volume()
+                candidate_volumes = np.append(candidate_volumes, cand_volume)
+
+            # print(candidate_volumes)
+            # print(f"shape of rot matrices, {rotation_matrices.shape}")
+
+            min_idx = np.argmin(candidate_volumes)
+            min_box_points = candidate_boxes[min_idx]
+            min_box_points = np.dot(
+                min_box_points, np.linalg.inv(rotation_matrices[min_idx]).T
             )
-            rotation_matrices = np.vstack((rotation_matrices, rot_mat.reshape(1, 3, 3)))
-            # fmt:on
-            # apply the rotation
-            rot_points = np.dot(points, rot_mat.T)
+            self.corner_points = min_box_points
+            self.order_points()
 
-            # fit axis aligned bounding box
-            box_canidate = BBox()
-            box_canidate.fit_axis_aligned(rot_points)
-            box_points = box_canidate.corner_points
-            candidate_boxes = np.vstack((candidate_boxes, box_points.reshape(1, 8, 3)))
-            cand_volume = box_canidate.volume()
-            candidate_volumes = np.append(candidate_volumes, cand_volume)
-
-        # print(candidate_volumes)
-        # print(f"shape of rot matrices, {rotation_matrices.shape}")
-
-        min_idx = np.argmin(candidate_volumes)
-        min_box_points = candidate_boxes[min_idx]
-        min_box_points = np.dot(
-            min_box_points, np.linalg.inv(rotation_matrices[min_idx]).T
-        )
-        self.corner_points = min_box_points
-        self.order_points()
+        except ValueError:
+            print("-- no points to fit bounding box, passing ...")
 
         return self
 
