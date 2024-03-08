@@ -13,8 +13,8 @@ class Visualization:
         self.visu_list.append(point_cloud)
 
     def point_cloud_geometry(
-        self, points: np.ndarray, colors=np.empty((0,))
-    ) -> np.ndarray:
+        self, points: np.ndarray, unique_color=None, colors=np.empty((0,))
+    ) -> None:
         """create an open3d point cloud from points
 
         Args:
@@ -24,14 +24,16 @@ class Visualization:
         pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points))
         if np.any(colors):
             pcd.colors = o3d.utility.Vector3dVector(colors)
+        if unique_color is not None:
+            pcd.paint_uniform_color(unique_color)
         # append to Visualization list
         self.visu_list.append(pcd)
 
     def bbox_geometry(self, bboxes: list[BBox], color=[0, 1, 0]):
-        """creates an open3d line set from a bounding box. Points should be ordered!
+        """Creates an open3d line set from a bounding box. Points should be ordered!
 
         Args:
-            bounding_box (bbox): bbox object
+            bounding_box (bbox): bbox object, or list of BBox objects
             color (list, optional): RGB color, list in range of 0, 1. Defaults to [0, 1, 0].
         """
 
@@ -56,7 +58,7 @@ class Visualization:
             # append to Visualization list
             self.visu_list.append(bounding_box)
 
-        # handle exception so that it accepts Bbox objects as well.
+        # handle exception so that it accepts Bbox objects and list[BBox]
         try:
             for box in bboxes:
                 visualize_bbox(box)
