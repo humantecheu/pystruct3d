@@ -64,11 +64,13 @@ def calculate_relative_position(
     # Pre-allocate memory to save time on stacking results
     dot_result = np.empty((plane_normals.shape[0], points.shape[0]))
 
-    # Mathematical explanation:
-    # dot_result = (point - plane_point) . plane_normal
-    #            = point . plane_normal - plane_point . plane_normal
-    #            = point_dot - plane_dot
+    """Mathematical explanation:
+    dot_result = (point - plane_point) . plane_normal
+               = point . plane_normal - plane_point . plane_normal
+               = point_dot - plane_dot
+    """
 
+    # Optimized solution assumes normals of parallel faces are equal and opposite
     plane_dot = np.sum(plane_points * plane_normals, axis=1)
     point_dot = np.dot(points, plane_normals[0])
     dot_result[0] = point_dot - plane_dot[0]

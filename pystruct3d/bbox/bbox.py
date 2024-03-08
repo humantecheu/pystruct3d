@@ -1,4 +1,5 @@
 import time
+import warnings
 
 import numpy as np
 from scipy.spatial import ConvexHull
@@ -125,6 +126,7 @@ class BBox:
         self,
         points: np.ndarray,
         probability_threshold=0,
+        in_2d=False,
     ):
         def calculate_pdf():
             shortest_distance = calculate_distances(
@@ -136,20 +138,28 @@ class BBox:
             sigma = self.width() / 2
             return np.exp(-0.5 * ((shortest_distance / sigma) ** 2))
 
+        if in_2d and probability_threshold > 0:
+            warnings.warn("probability_threshold is ignored when applied to 2D only.")
+
         plane_distances, positive_direction = calculate_relative_position(
             points,
             self.corner_points,
             probability_threshold > 0,
         )
-        if probability_threshold > 0:
+
+        if not in_2d and probability_threshold > 0:
             pdf = calculate_pdf()
             indices = (pdf > probability_threshold).squeeze()
             return points[indices], indices, pdf
+        elif in_2d:
+            # Ignore the top and bottom planes
+            indices = np.nonzero(~positive_direction[:4].any(axis=0))
+            return points[indices], indices
         else:
             # A point which is "below" all planes falls inside the bbox
             # indices = np.where(~positive_direction.any(axis=0))  # [0].T
             indices = np.nonzero(~positive_direction.any(axis=0))  # [0].T
-            return points[indices], indices, None
+            return points[indices], indices
 
     def points_in_bbox(self, points: np.ndarray, tolerance=1e-12):
         """find the points inside a bounding box
