@@ -1,5 +1,3 @@
-from typing import List, Tuple
-
 import numpy as np
 
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
@@ -7,14 +5,14 @@ from pystruct3d.metrics.voxelization_limits import voxelization_limits
 
 def voxelize_pointcloud(
     pointcloud: np.ndarray,
-    volume_limits: Tuple[np.ndarray, np.ndarray],
+    volume_limits: tuple[np.ndarray, np.ndarray],
     voxel_size: float,
 ) -> np.ndarray:
     """_summary_
 
     Args:
         pointcloud (np.ndarray): _description_
-        volume_limits (Tuple[np.ndarray, np.ndarray]): _description_
+        volume_limits (tuple[np.ndarray, np.ndarray]): _description_
         voxel_size (float): _description_
 
     Returns:
@@ -41,19 +39,19 @@ def voxelize_pointcloud(
 def voxel_iou(
     groundtruth_pc: np.ndarray,
     predicted_pc: np.ndarray,
-    volume_limits: Tuple[np.ndarray, np.ndarray] = None,
+    volume_limits: tuple[np.ndarray, np.ndarray] = None,
     voxel_size: float = 0.01,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     """_summary_
 
     Args:
         groundtruth_pc (np.ndarray): _description_
         predicted_pc (np.ndarray): _description_
-        volume_limits (Tuple[int, int]): _description_
+        volume_limits (tuple[int, int]): _description_
         voxel_size (float, optional): _description_. Defaults to 0.01.
 
     Returns:
-        Tuple[float, float]: _description_
+        tuple[float, float]: _description_
     """
     if volume_limits is None:
         volume_limits = voxelization_limits(groundtruth_pc, predicted_pc)
@@ -77,11 +75,11 @@ def voxel_iou(
     return iou, num_gt_voxels
 
 
-def mean_voxel_iou(classes_iou: List[Tuple[float, float]]) -> float:
+def mean_voxel_iou(classes_iou: list[tuple[float, float]]) -> float:
     """_summary_
 
     Args:
-        classes_iou (List[Tuple[float, float]]): _description_
+        classes_iou (list[tuple[float, float]]): _description_
 
     Returns:
         float: _description_

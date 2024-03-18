@@ -1,13 +1,14 @@
-import numpy as np
-from scipy.spatial import KDTree
 import math
 
-from pystruct3d.bbox.bbox import BBox
+import numpy as np
+from scipy.spatial import KDTree
+
 from pystruct3d.bbox import utils
+from pystruct3d.bbox.bbox import BBox
 
 
 def get_centroids(bbox_list):
-    bbox_array = utils.bbox_array_from_list(bbox_list)
+    bbox_array = utils.bbox_list2array(bbox_list)
     centroid = np.mean(bbox_array, axis=1)
     return centroid
 
@@ -72,9 +73,9 @@ def main():
     bx_array = np.load(
         "/home/kaufmann/scaleBIM/data/08_ShortOffice_01_F1_raw_wall_bboxes.npy"
     )
-    bx_list = utils.bbox_list_from_array(bx_array)
+    bx_list = utils.bbox_array2list(bx_array)
     gt_array = bx_array + np.random.uniform(low=0.05, high=0.2)
-    gt_list = utils.bbox_list_from_array(gt_array)
+    gt_list = utils.bbox_array2list(gt_array)
     deviation(bx_list, gt_list)
 
 
