@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
@@ -154,14 +152,14 @@ def bbox_iou(bbox_1: BBox, bbox_2: BBox):
 
 
 def mean_bbox_iou(
-    groundtruth_bbox_list: List[BBox],
-    predicted_bbox_list: List[BBox],
+    groundtruth_bbox_list: list[BBox],
+    predicted_bbox_list: list[BBox],
 ) -> float:
     """_summary_
 
     Args:
-        groundtruth_bbox_list (List[BBox]): _description_
-        predicted_bbox_list (List[BBox]): _description_
+        groundtruth_bbox_list (list[BBox]): _description_
+        predicted_bbox_list (list[BBox]): _description_
 
     Returns:
         _type_: _description_
