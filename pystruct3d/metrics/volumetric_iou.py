@@ -1,16 +1,15 @@
-from typing import List, Tuple
-
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.generate_example import create_bbox_lists
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
+
 # from pystruct3d.visualization.visualization import Visualization
 
 
 def voxelize_bbox(
     bbox: BBox,
-    volume_limits: Tuple[np.ndarray, np.ndarray],
+    volume_limits: tuple[np.ndarray, np.ndarray],
     voxel_size: float,
 ):
     """_summary_
@@ -38,11 +37,13 @@ def voxelize_bbox(
     midpoints = np.stack((x, y, z), axis=-1).reshape(-1, 3)
 
     # Check which midpoints are inside the convex hull
-    points_in_bbox, _ = bbox.points_in_BBox(midpoints)
+    points_in_bbox, _ = bbox.points_in_bbox_probability(midpoints)
     indices = ((points_in_bbox - min_vals) / voxel_size).astype(int)
 
     # fmt: off
-    unravelled_indices = (
+    # TODO: check numpy builtin method for potential speedup
+    # https://numpy.org/doc/stable/reference/generated/numpy.ravel_multi_index.html
+    flattened_indices = (
         indices[:, 2] * x_dim * y_dim +
         indices[:, 1] * x_dim +
         indices[:, 0]
@@ -54,18 +55,19 @@ def voxelize_bbox(
     # vis.point_cloud_geometry(points_in_bbox)
     # vis.visualize()
 
-    return np.unique(unravelled_indices)
+    return np.unique(flattened_indices)
 
 
 def volumetric_iou(
-    groundtruth_bboxes: List[BBox],
-    predicted_bboxes: List[BBox],
-    volume_limits: Tuple[np.ndarray, np.ndarray] = None,
+    groundtruth_bboxes: list[BBox],
+    predicted_bboxes: list[BBox],
+    volume_limits: tuple[np.ndarray, np.ndarray] = None,
     voxel_size: float = 0.01,
 ):
     if volume_limits is None:
         volume_limits = voxelization_limits(groundtruth_bboxes, predicted_bboxes)
 
+    # TODO: Vectorize and benchmark
     groundtruth_indices = np.array([])
     for bbox in groundtruth_bboxes:
         groundtruth_indices = np.union1d(
@@ -85,7 +87,7 @@ def volumetric_iou(
     return iou, num_gt_voxels
 
 
-def mean_volumetric_iou(classes_iou: List[Tuple[float, float]]) -> float:
+def mean_volumetric_iou(classes_iou: list[tuple[float, float]]) -> float:
     """_summary_
 
     Args:
