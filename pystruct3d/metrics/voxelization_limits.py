@@ -1,31 +1,17 @@
-from typing import List, Tuple
-
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
+from pystruct3d.bbox.utils import bbox_list2array
 
 
-def bbox_list2array(bbox_list: List[BBox]) -> np.ndarray:
-    """Returns a numpy array of a list of bounding boxes.
-
-    Args:
-        bbox_list (List[BBox]): List of BBox of size n
-
-    Returns:
-        np.ndarray: numpy array of size nx8x3
-    """
-
-    return np.array([bbox.as_np_array() for bbox in bbox_list])
-
-
-def pc_limits(pointcloud: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def pointcloud_limits(pointcloud: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """_summary_
 
     Args:
         pointcloud (np.ndarray): _description_
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: _description_
+        tuple[np.ndarray, np.ndarray]: _description_
     """
     assert pointcloud.shape[1] == 3, "pointcloud must be of shape nx3"
     min_values = np.floor(np.min(pointcloud, axis=0)).astype(int)
@@ -35,14 +21,14 @@ def pc_limits(pointcloud: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return min_values, max_values
 
 
-def bbox_limits(bboxes_list: List[BBox]) -> Tuple[np.ndarray, np.ndarray]:
+def bbox_limits(bboxes_list: list[BBox]) -> tuple[np.ndarray, np.ndarray]:
     """_summary_
 
     Args:
-        bboxes_list (List[BBox]): _description_
+        bboxes_list (list[BBox]): _description_
 
     Returns:
-        Tuple[np.ndarray, np.ndarray]: _description_
+        tuple[np.ndarray, np.ndarray]: _description_
     """
     bbox_array = bbox_list2array(bboxes_list)
 
@@ -53,8 +39,8 @@ def bbox_limits(bboxes_list: List[BBox]) -> Tuple[np.ndarray, np.ndarray]:
 
 
 def voxelization_limits(
-    *args: np.ndarray | BBox | List[BBox],
-) -> Tuple[np.ndarray, np.ndarray]:
+    *args: np.ndarray | BBox | list[BBox],
+) -> tuple[np.ndarray, np.ndarray]:
     """_summary_
 
     Returns:
@@ -63,10 +49,10 @@ def voxelization_limits(
     limits_list = []
     for arg in args:
         if isinstance(arg, np.ndarray):
-            limits_list.append(pc_limits(arg))
+            limits_list.append(pointcloud_limits(arg))
         elif isinstance(arg, BBox):
             limits_list.append(bbox_limits([arg]))
-        elif isinstance(arg, List) and all(isinstance(item, BBox) for item in arg):
+        elif isinstance(arg, list) and all(isinstance(item, BBox) for item in arg):
             limits_list.append(bbox_limits(arg))
         else:
             raise TypeError("Arguments can either be of type np.ndarray or List[BBox]")

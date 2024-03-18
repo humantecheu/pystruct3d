@@ -1,12 +1,10 @@
-from typing import List, Tuple
-
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
 
 
 def create_bounding_box(
-    bottom_corner: Tuple[float, float, float],
+    bottom_corner: tuple[float, float, float],
     l: float,
     w: float,
     h: float,
@@ -15,7 +13,7 @@ def create_bounding_box(
     length l, width w, and height h
 
     Args:
-        bottom_corner (Tuple[float, float, float]): bottom left corner
+        bottom_corner (tuple[float, float, float]): bottom left corner
         l (float): length (m)
         w (float): width (m)
         h (float): height (m)
@@ -40,20 +38,20 @@ def create_bounding_box(
 
 def generate_bounding_boxes(
     n_boxes: int = 15,
-    l_range: Tuple[float, float] = (3, 5),
-    w_range: Tuple[float, float] = (1, 2),
-    h_range: Tuple[float, float] = (2, 3),
-) -> List[BBox]:
+    l_range: tuple[float, float] = (3, 5),
+    w_range: tuple[float, float] = (1, 2),
+    h_range: tuple[float, float] = (2, 3),
+) -> list[BBox]:
     """Generate n_boxes bounding boxes with random sizes and positions
 
     Args:
         n_boxes (int, optional): _description_. Defaults to 15.
-        l_range (Tuple[float, float], optional): _description_. Defaults to (3, 5).
-        w_range (Tuple[float, float], optional): _description_. Defaults to (1, 2).
-        h_range (Tuple[float, float], optional): _description_. Defaults to (2, 3).
+        l_range (tuple[float, float], optional): _description_. Defaults to (3, 5).
+        w_range (tuple[float, float], optional): _description_. Defaults to (1, 2).
+        h_range (tuple[float, float], optional): _description_. Defaults to (2, 3).
 
     Returns:
-        List[BBox]: _description_
+        list[BBox]: _description_
     """
     assert n_boxes > 1, f"n_boxes must be greater than or equal to 1!"
     x_range = (0, n_boxes)
@@ -89,20 +87,20 @@ def generate_bounding_boxes(
 
 
 def shift_bounding_boxes(
-    bounding_boxes: List[BBox],
+    bounding_boxes: list[BBox],
     n_boxes_to_shift: float,
-    shift_range: Tuple[float, float] = (-1, 1),
-) -> List[BBox]:
+    shift_range: tuple[float, float] = (-1, 1),
+) -> list[BBox]:
     """Randomly select a subset of bounding boxes and shift them
     randomly in a small region around their original position
 
     Args:
-        bounding_boxes (List[BBox]): _description_
+        bounding_boxes (list[BBox]): _description_
         n_boxes_to_shift (float): _description_
-        shift_range (Tuple[float, float], optional): _description_. Defaults to (-1, 1).
+        shift_range (tuple[float, float], optional): _description_. Defaults to (-1, 1).
 
     Returns:
-        List[BBox]: _description_
+        list[BBox]: _description_
     """
     shifted_boxes = []
 
@@ -121,7 +119,7 @@ def shift_bounding_boxes(
     return shifted_boxes
 
 
-def create_bbox_lists() -> Tuple[List[BBox], List[BBox]]:
+def create_bbox_lists() -> tuple[list[BBox], list[BBox]]:
     # Generate bounding boxes
     bboxes_1 = generate_bounding_boxes(20)
 
