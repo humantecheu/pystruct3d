@@ -55,40 +55,40 @@ def calculate_relative_position(
     # Normals all point in the outward direction of the bbox faces
     plane_normals, plane_points = calculate_plane_normals(corner_points)
 
-    assert (
-        np.allclose(plane_normals[0], -plane_normals[2])
-        and np.allclose(plane_normals[1], -plane_normals[3])
-        and np.allclose(plane_normals[4], -plane_normals[5])
-    ), "Normalized normal vectors should be equal but opposite!"
-
     # Pre-allocate memory to save time on stacking results
     dot_result = np.empty((plane_normals.shape[0], points.shape[0]))
 
-    """Mathematical explanation:
-    dot_result = (point - plane_point) . plane_normal
-               = point . plane_normal - plane_point . plane_normal
-               = point_dot - plane_dot
-    """
+    try:
+        assert (
+            np.allclose(plane_normals[0], -plane_normals[2])
+            and np.allclose(plane_normals[1], -plane_normals[3])
+            and np.allclose(plane_normals[4], -plane_normals[5])
+        )
+        # Optimized solution assumes normals of parallel faces are equal and opposite
+        plane_dot = np.sum(plane_points * plane_normals, axis=1)
+        point_dot = np.dot(points, plane_normals[0])
+        dot_result[0] = point_dot - plane_dot[0]
+        dot_result[2] = -point_dot - plane_dot[2]
+        point_dot = np.dot(points, plane_normals[1])
+        dot_result[1] = point_dot - plane_dot[1]
+        dot_result[3] = -point_dot - plane_dot[3]
+        point_dot = np.dot(points, plane_normals[4])
+        dot_result[4] = point_dot - plane_dot[4]
+        dot_result[5] = -point_dot - plane_dot[5]
+    except AssertionError:
+        print(
+            "Use generalized but slower solution. Normalized normal vectors NOT equal but opposite"
+        )
 
-    # Optimized solution assumes normals of parallel faces are equal and opposite
-    plane_dot = np.sum(plane_points * plane_normals, axis=1)
-    point_dot = np.dot(points, plane_normals[0])
-    dot_result[0] = point_dot - plane_dot[0]
-    dot_result[2] = -point_dot - plane_dot[2]
-    point_dot = np.dot(points, plane_normals[1])
-    dot_result[1] = point_dot - plane_dot[1]
-    dot_result[3] = -point_dot - plane_dot[3]
-    point_dot = np.dot(points, plane_normals[4])
-    dot_result[4] = point_dot - plane_dot[4]
-    dot_result[5] = -point_dot - plane_dot[5]
+        """Mathematical explanation:
+        dot_result = (point - plane_point) . plane_normal
+                = point . plane_normal - plane_point . plane_normal
+                = point_dot - plane_dot
+        """
 
-    # Generalized solution but not best computationally
-    # dot_result[0] = np.dot(points - plane_points[0], normals[0])
-    # dot_result[1] = np.dot(points - plane_points[1], normals[1])
-    # dot_result[2] = np.dot(points - plane_points[2], normals[2])
-    # dot_result[3] = np.dot(points - plane_points[3], normals[3])
-    # dot_result[4] = np.dot(points - plane_points[4], normals[4])
-    # dot_result[5] = np.dot(points - plane_points[5], normals[5])
+        # Generalized solution but not best computationally
+        for i in range(plane_normals.shape[0]):
+            dot_result[i] = np.dot(points - plane_points[i], plane_normals[i])
 
     # Positive dot_result is for points "above" a plane in the direction of the normal
     positive_direction = dot_result > 0
