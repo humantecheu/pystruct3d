@@ -27,8 +27,7 @@ def deviation(bbox_list, gt_list):
         # 1st element is the distance
         if not math.isinf(nn[0]):
             dists.append(nn[0])
-    print(dists)
-    print(f"Centroid deviation {np.mean(np.asarray(dists))}")
+
     return np.mean(np.asarray(dists))
     # deviation_vec = bx_centroids - gt_centroids
     # deviation = np.linalg.norm(deviation_vec, axis=1)

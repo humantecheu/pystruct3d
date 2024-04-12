@@ -84,7 +84,11 @@ def bbox_2d_intersection(bbox_1: BBox, bbox_2: BBox):
             elif on_segment(line_2, bbox_1_2d[i]):
                 vertices_2d.append(bbox_1_2d[i, :2])
 
-    vertices_2d = np.array(vertices_2d)
+    if not vertices_2d:
+        vertices_2d = np.zeros((0, 2))
+    else:
+        vertices_2d = np.array(vertices_2d)
+
     points, _ = bbox_1.points_in_bbox_probability(bbox_2_2d, 0, True)
     if points.any():
         vertices_2d = np.vstack((vertices_2d, points[:, :2]))

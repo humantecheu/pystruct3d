@@ -613,6 +613,7 @@ class BBox:
     def bbox_from_verts(
         self,
         verts: np.ndarray,  # n,
+        force_cuboid: bool = True,
     ) -> np.ndarray:
         """Function to get the bounding box from vertices. Vertices are the
         points of an IFC geometry shape as a np.ndarray of shape n, . The vertices
@@ -636,32 +637,38 @@ class BBox:
         orig_shape = verts.shape[0]
         verts = verts.reshape((int(orig_shape / 3), 3))
         corner_pts = verts[verts[:, 2].argsort()]
-        # min, max and mean of XYZ
-        min_x = np.amin(corner_pts[:, 0])
-        max_x = np.amax(corner_pts[:, 0])
-        mean_x = (min_x + max_x) / 2
+        # vertices from IFC may result in arbitrary non-cuboid bounding boxes
+        if force_cuboid:
+            # fit a bounding box to enforce cuboid-shaped bounding box
+            self.fit_horizontal_aligned(verts)
+        else:
+            # if non-cuboid shape is acceptable, find extreme and use as corner points
+            # min, max and mean of XYZ
+            min_x = np.amin(corner_pts[:, 0])
+            max_x = np.amax(corner_pts[:, 0])
+            mean_x = (min_x + max_x) / 2
 
-        min_y = np.amin(corner_pts[:, 1])
-        max_y = np.amax(corner_pts[:, 1])
-        mean_y = (min_y + max_y) / 2
+            min_y = np.amin(corner_pts[:, 1])
+            max_y = np.amax(corner_pts[:, 1])
+            mean_y = (min_y + max_y) / 2
 
-        min_z = np.amin(corner_pts[:, 2])
-        max_z = np.amax(corner_pts[:, 2])
-        mean_z = (min_z + max_z) / 2
+            min_z = np.amin(corner_pts[:, 2])
+            max_z = np.amax(corner_pts[:, 2])
+            mean_z = (min_z + max_z) / 2
 
-        # find centroid
-        centrd = np.asarray([mean_x, mean_y, mean_z])
+            # find centroid
+            centrd = np.asarray([mean_x, mean_y, mean_z])
 
-        # find 8 points furthest away from centroid
-        diffs = np.subtract(corner_pts, centrd)
-        dists = np.linalg.norm(diffs, axis=1)
+            # find 8 points furthest away from centroid
+            diffs = np.subtract(corner_pts, centrd)
+            dists = np.linalg.norm(diffs, axis=1)
 
-        # take 8 points with maximum distances to centroid
-        corner_pts_idx = (-dists).argsort()[:8]
-        corner_pts = corner_pts[corner_pts_idx]
+            # take 8 points with maximum distances to centroid
+            corner_pts_idx = (-dists).argsort()[:8]
+            corner_pts = corner_pts[corner_pts_idx]
 
-        self.corner_points = corner_pts
-        self.order_points()
+            self.corner_points = corner_pts
+            self.order_points()
 
     def from_cv4aec(self, cv4aec_dict: dict):
         """Create bounding boxes from cv4aec parameters
