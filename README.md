@@ -2,8 +2,12 @@
 
 # Installation
 
-The `-e` flag is used for development
+Clone the repository. 
+
+From root `pystruct3d/`:
 `pip install -e .`
+
+The `-e` flag is used for development. If you only want to use the module, `pip install . ` is enough for you. 
 
 # Python version
 
