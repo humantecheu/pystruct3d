@@ -19,6 +19,8 @@ Numpy
 
 Scipy
 
+Laspy
+
 **For visualization only**
 
 Open3D
@@ -35,8 +37,8 @@ The corner points are ordered in counter-clockwise order from bottom to the top.
 
 # ToDo table
 
-- [ ] change points_in_BBox to points_in_bbox
-- [ ] implement from_cv4aec bbox method
+- [X] change points_in_BBox to points_in_bbox
+- [X] implement from_cv4aec bbox method
 
 | **module**                            | **name**              | **classes, methods and functions**     | **comments**              |
 |---------------------------------------|-----------------------|----------------------------------------|---------------------------|
@@ -66,11 +68,13 @@ The corner points are ordered in counter-clockwise order from bottom to the top.
 |                                       |                       | - [ ] fit_minimal                      |                           |
 |                                       |                       | - [X] bbox_from_verts                  |                           |
 |                                       |                       | - [ ] ...                              |                           |
-| visualization                         | visualization         | - [ ] points_cloud_geometry            |                           |
-|                                       |                       | - [ ] bbox_geometry                    |                           |
+| visualization                         | visualization         | - [X] o3d_point_cloud                  |                           |
+|                                       |                       | - [X] point_cloud_geometry             |                           |
+|                                       |                       | - [X] bbox_geometry                    |                           |
 |                                       |                       | - [ ] plane_geometry                   |                           |
-|                                       |                       | - [ ] visualize                        |                           |
-| Evalutation and metrics               | metrics               | - [ ] bbox_iou                         | hungarian algorithm, ...  |
-|                                       |                       | - [ ] volumetric_iou                   |                           |
-|                                       |                       | - [ ] voxel_iou                        |                           |
+|                                       |                       | - [X] points_geometry                  |                           |
+|                                       |                       | - [X] visualize                        |                           |
+| Evalutation and metrics               | metrics               | - [X] bbox_iou                         | hungarian algorithm, ...  |
+|                                       |                       | - [X] volumetric_iou                   |                           |
+|                                       |                       | - [X] voxel_iou                        |                           |
 |                                       |                       | - [ ] ...                              |                           |
