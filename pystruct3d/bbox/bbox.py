@@ -2,6 +2,7 @@ import time
 import warnings
 
 import numpy as np
+import scipy
 from scipy.spatial import ConvexHull
 
 from pystruct3d.bbox.point_bbox_metrics import (
@@ -161,7 +162,9 @@ class BBox:
             indices = np.nonzero(~positive_direction.any(axis=0))  # [0].T
             return points[indices], indices
 
-    def points_in_bbox(self, points: np.ndarray, tolerance=1e-12):
+    def points_in_bbox(
+        self, points: np.ndarray, tolerance=1e-12
+    ) -> tuple[np.ndarray, np.ndarray]:
         """find the points inside a bounding box
 
         Args:
@@ -192,7 +195,6 @@ class BBox:
 
             return points_in_box, indices
         except:
-            print("-- trying to construct empty convex hull, passing ...")
             return np.empty((0,)), np.empty((0,))
 
     def translate(self, translation_vector: np.ndarray):  # shape (3, )
@@ -221,6 +223,20 @@ class BBox:
 
         self.corner_points[:4, 2] = min_zs
         self.corner_points[4:8, 2] = max_zs
+
+    def transform_xy(self, xy_dimension: float):
+
+        lower_center = np.mean(self.corner_points[:4], axis=0)
+        upper_center = np.mean(self.corner_points[4:8], axis=0)
+        add_dim = xy_dimension / 2
+        self.corner_points[0] = lower_center + np.array([[-add_dim, -add_dim, 0]])
+        self.corner_points[1] = lower_center + np.array([[+add_dim, -add_dim, 0]])
+        self.corner_points[2] = lower_center + np.array([[+add_dim, +add_dim, 0]])
+        self.corner_points[3] = lower_center + np.array([[-add_dim, +add_dim, 0]])
+        self.corner_points[4] = upper_center + np.array([[-add_dim, -add_dim, 0]])
+        self.corner_points[5] = upper_center + np.array([[+add_dim, -add_dim, 0]])
+        self.corner_points[6] = upper_center + np.array([[+add_dim, +add_dim, 0]])
+        self.corner_points[7] = upper_center + np.array([[-add_dim, +add_dim, 0]])
 
     def expand(self, offset):
         """Expand the bounding box to either direction with a given offset"""
@@ -344,6 +360,11 @@ class BBox:
         # angle = (angle + 360) % 360
         return angle
 
+    def dir_vector_norm(self) -> np.ndarray:
+        direction_vec = self.corner_points[1] - self.corner_points[0]
+        dir_norm = direction_vec / np.linalg.norm(direction_vec)
+        return dir_norm
+
     def project_into_parent(self, parent_bbox):
         """Project bounding box into parent bounding box e.g., door bounding box
         into parent wall. Projection is based on the parent normal, assuming
@@ -422,20 +443,16 @@ class BBox:
     def axis_align(self):
         """Axis aligns the bounding box. Calculates the minimum value against the
         x-axis, then rotates the box with this value."""
-        # copy and roll one set of points so that the order of the rolled is n + 1
-        points_rolled = np.roll(self.corner_points, 1, axis=0)
-        edges = points_rolled - self.corner_points
-        # reduce to 2 dimension
-        edges_xy = edges[:, :2]
-        # calculate angles
-        angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
-        angle = np.rad2deg(np.min(angles))
-        # rotate the minimum angle
-        angle = angle % 90
-        if angle <= 45:
-            self.rotate(-angle)
+        # BUG: aligns bounding box to x-axis always
+        ang = self.angle()
+        if ang <= 45:
+            self.rotate(-ang)
+        elif ang <= 90:
+            self.rotate(90 - ang)
+        elif ang <= 135:
+            self.rotate(-ang + 90)
         else:
-            self.rotate(90 - angle)
+            self.rotate(180 - ang)
 
     def as_np_array(self):
         return self.corner_points
@@ -605,6 +622,9 @@ class BBox:
         except ValueError:
             print("-- no points to fit bounding box, passing ...")
 
+        except scipy.spatial._qhull.QhullError:
+            print("-- 1d convex hull, passing ...")
+
         return self
 
     def fit_minimal():
@@ -761,7 +781,8 @@ class BBox:
                 "host_id": host_id,
             }
         elif output_style == "start_pt":
-            to_base_vec = 0.5 * self.corner_points[2] - self.corner_points[1]
+            side_vector = self.corner_points[2] - self.corner_points[1]
+            to_base_vec = 0.5 * side_vector
             data_dict = {
                 "id": element_id,
                 "start_pt": list(self.corner_points[0] + to_base_vec),
