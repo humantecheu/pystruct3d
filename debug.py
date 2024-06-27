@@ -33,13 +33,17 @@ def random_testing():
             [1.0, 0.4, 2.0],
         ]
     )
-
-    bx = bbox.BBox(sample_points)
-
-    bx.get_center_plane()
-
     visu = visualization.Visualization()
-    visu.bbox_geometry([bx])
+    bx = bbox.BBox(sample_points)
+    door_bx = bbox.BBox(door_points)
+    door_bx.rotate(-15)
+    visu.bbox_geometry([bx, door_bx])
+    visu.visualize()
+    visu.clear()
+
+    door_bx.project_into_parent(bx)
+
+    visu.bbox_geometry([bx, door_bx])
 
     visu.visualize()
 
@@ -110,7 +114,8 @@ def compare_bbox_fitting():
 
 
 def main():
-    compare_bbox_fitting()
+    # compare_bbox_fitting()
+    random_testing()
 
 
 if __name__ == "__main__":

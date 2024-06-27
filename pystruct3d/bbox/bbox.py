@@ -388,24 +388,13 @@ class BBox:
         nv = wv / np.linalg.norm(wv)
         # calculate d: sum of (normal vector x point on plane)
         d1 = np.sum(nv * parent_bbox.corner_points[0])
-        d2 = np.sum(nv * parent_bbox.corner_points[3])
-
+        # stack normals and d1 to matrices to apply to all 8 corner points
         nv_matr = np.tile(nv, (8, 1))
         d1_matr = np.tile(-d1, (8, 1))
-        d2_matr = np.tile(-d2, (8, 1))
-        # find closest surface
         # distance of point(r, s, u) to plane = |ar + bs + cu + d|
         dist1 = np.sum(np.hstack((self.corner_points * nv_matr, d1_matr)), axis=1)
-        dist2 = np.sum(np.hstack((self.corner_points * nv_matr, d2_matr)), axis=1)
-        mean_dist1 = np.mean(np.abs(dist1))
-        mean_dist2 = np.mean(np.abs(dist2))
-        min_mean = np.argmin(np.asarray(mean_dist1, mean_dist2))
         # transform points to surface and surface + parent width respectively
         translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
-        # if min_mean == 0:
-        #     translation = nv_matr * np.negative(np.tile(dist1, (3, 1)).T)
-        # else:
-        #     translation = nv_matr * np.negative(np.tile(dist2, (3, 1)).T)  # dist1
         self.corner_points += translation
         self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
         self.order_points()
