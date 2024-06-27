@@ -16,10 +16,8 @@ def get_centroids(bbox_list):
 def deviation(bbox_list, gt_list):
     bx_centroids = get_centroids(bbox_list)
     gt_centroids = get_centroids(gt_list)
-    print(bx_centroids, gt_centroids)
 
     bx_kd_tree = KDTree(bx_centroids)
-    gt_kd_tree = KDTree(gt_centroids)
 
     dists = []
     for pt in gt_centroids:
