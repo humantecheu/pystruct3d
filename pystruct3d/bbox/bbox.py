@@ -670,6 +670,8 @@ class BBox:
             self.corner_points = corner_pts
             self.order_points()
 
+        return self
+
     def from_cv4aec(self, cv4aec_dict: dict):
         """Create bounding boxes from cv4aec parameters
 
