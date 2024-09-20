@@ -34,11 +34,32 @@ def random_testing():
         ]
     )
 
-    bx = bbox.BBox(sample_points)
+    angle = np.deg2rad(30)  # problem at 180
+    axis = np.array([0, 0, 1])
+    c = np.cos(angle)
+    s = np.sin(angle)
+    t = 1 - c
+    axis = axis / np.linalg.norm(axis)
+    x, y, z = axis
+    # fmt:off
+    rot_mat = np.array(
+        [
+            [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
+            [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
+            [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
+        ]
+    )
 
-    bx.get_center_plane()
+    rand_pts = np.dot(rand_pts, rot_mat.T)
+
+    bx = bbox.BBox(door_points)
+    bx.order_points()
+    bx.rotate(20)
+    inliers = bx.points_in_bbox(rand_pts)
+
 
     visu = visualization.Visualization()
+    visu.point_cloud_geometry(inliers[0])
     visu.bbox_geometry([bx])
 
     visu.visualize()
@@ -110,7 +131,8 @@ def compare_bbox_fitting():
 
 
 def main():
-    compare_bbox_fitting()
+    # compare_bbox_fitting()
+    random_testing()
 
 
 if __name__ == "__main__":
