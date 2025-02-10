@@ -44,7 +44,7 @@ def main():
     # when you use an ascii cloud that contains the labels you may use this code
     # just uncomment and comment the code above
     input_file = (
-        "/home/kaufmann/Desktop/ADAC/20230812_ADAC_1_aligned_labeled_merged.asc"
+        "/home/kaufmann/Desktop/ADAC/20230804_ADAC_1_aligned_labeled_merged.asc"
     )
     input_arr = np.loadtxt(
         input_file,
