@@ -192,15 +192,15 @@ def calculate_distances(
             [True, False, False, True, False, True],  # c4
         ]
     )
+    plane_names = ["p0", "p1", "p2", "p3", "p4", "p5"]  # 6 planes
     # fmt: off
-    case_names = [
-        "p0","p1", "p2", "p3", "p4", "p5",  # 6 plane distances
-        "e51", "e62", "e73", "e40",
-        "e10", "e54", "e21", "e65",
-        "e32", "e76", "e30", "e74",  # 12 edge distances
-        "c1", "c2", "c3", "c0", "c5", "c6", "c7", "c4",  # 8 corner distances
+    edge_names = [  # 12 edges
+        "e51", "e62", "e73", "e40", "e10", "e54",
+        "e21", "e65", "e32", "e76", "e30", "e74",  
     ]
     # fmt: on
+    corner_names = ["c1", "c2", "c3", "c0", "c5", "c6", "c7", "c4"]  # 8 corners
+    case_names = plane_names + edge_names + corner_names
 
     shortest_distance = np.zeros((positive_direction.shape[1], 1))
     edges, corners = generate_edge_dict(corner_points)
@@ -208,17 +208,14 @@ def calculate_distances(
     for i, (name, direction) in enumerate(zip(case_names, directions)):
         # exit()
         pos = (positive_direction == direction[np.newaxis].T).all(axis=0)
-        if name in ["p0", "p1", "p2", "p3", "p4", "p5"]:
+        if name in plane_names:
             shortest_distance[pos] = plane_distances[i, pos][np.newaxis].T
-        # fmt: off
-        elif name in ["e51", "e62", "e73", "e40", "e54", "e10",
-                      "e65", "e21", "e76", "e32", "e74", "e30"]:
-            # fmt: on
+        elif name in edge_names:
             shortest_distance[pos] = np.linalg.norm(
                 np.cross(points[pos] - corners[name], edges[name]),
                 axis=1,
             )[np.newaxis].T
-        elif name in ["c1", "c2", "c3", "c0", "c5", "c6", "c7", "c4"]:
+        elif name in corner_names:
             shortest_distance[pos] = np.linalg.norm(
                 points[pos] - corners[name],
                 axis=1,

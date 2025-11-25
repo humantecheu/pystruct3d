@@ -1,5 +1,6 @@
 import numpy as np
 import open3d as o3d
+
 from pystruct3d.bbox.bbox import BBox
 
 
@@ -88,7 +89,7 @@ class Visualization:
         """visualize list of geometries"""
         # open3d coordinate frame
         coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame()
-        self.visu_list.append(coord_frame)
+        # self.visu_list.append(coord_frame)
         if self.visu_list:
             o3d.visualization.draw_geometries(
                 self.visu_list,

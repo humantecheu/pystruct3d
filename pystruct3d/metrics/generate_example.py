@@ -5,18 +5,18 @@ from pystruct3d.bbox.bbox import BBox
 
 def create_bounding_box(
     bottom_corner: tuple[float, float, float],
-    l: float,
-    w: float,
-    h: float,
+    length: float,
+    width: float,
+    height: float,
 ) -> np.ndarray:
     """Create a bounding box with bottom left corner at (x, y, z),
-    length l, width w, and height h
+    length, width, and height
 
     Args:
         bottom_corner (tuple[float, float, float]): bottom left corner
-        l (float): length (m)
-        w (float): width (m)
-        h (float): height (m)
+        length (float): length (m)
+        width (float): width (m)
+        height (float): height (m)
 
     Returns:
         np.ndarray: 8x3 array of bounding box corners
@@ -25,13 +25,13 @@ def create_bounding_box(
     return np.array(
         [
             [x, y, z],
-            [x + l, y, z],
-            [x + l, y + w, z],
-            [x, y + w, z],
-            [x, y, z + h],
-            [x + l, y, z + h],
-            [x + l, y + w, z + h],
-            [x, y + w, z + h],
+            [x + length, y, z],
+            [x + length, y + width, z],
+            [x, y + width, z],
+            [x, y, z + height],
+            [x + length, y, z + height],
+            [x + length, y + width, z + height],
+            [x, y + width, z + height],
         ]
     )
 
@@ -53,7 +53,7 @@ def generate_bounding_boxes(
     Returns:
         list[BBox]: _description_
     """
-    assert n_boxes > 1, f"n_boxes must be greater than or equal to 1!"
+    assert n_boxes > 1, "n_boxes must be greater than or equal to 1!"
     x_range = (0, n_boxes)
     y_range = (0, n_boxes)
     z_range = (0, 2 * np.array(h_range).max())
@@ -63,21 +63,21 @@ def generate_bounding_boxes(
     max_w = 0
     for _ in range(n_boxes):
         # Generate random dimensions
-        l = np.random.uniform(*l_range)
-        w = np.random.uniform(*w_range)
-        h = np.random.uniform(*h_range)
+        length = np.random.uniform(*l_range)
+        width = np.random.uniform(*w_range)
+        height = np.random.uniform(*h_range)
         z = np.random.uniform(*z_range)
 
         # Create bounding box
-        box = create_bounding_box((x, y, z), l, w, h)
+        box = create_bounding_box((x, y, z), length, width, height)
         bounding_boxes.append(BBox(box))
 
         # Move to the next position
-        x += l + 1 + np.random.uniform(0, 1)
+        x += length + 1 + np.random.uniform(0, 1)
         if x > x_range[1]:
             x = 0
             y += max_w + 1 + np.random.uniform(0, 1)
-        max_w = max(max_w, w)
+        max_w = max(max_w, width)
 
         # Check if we've moved out of the y-range
         if y > y_range[1]:

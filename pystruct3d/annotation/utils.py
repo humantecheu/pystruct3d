@@ -1,6 +1,6 @@
-import open3d as o3d
-import numpy as np
 import e57
+import numpy as np
+import open3d as o3d
 
 from pystruct3d.utils import las_utils
 
@@ -10,7 +10,6 @@ def transfer_labels(
     labels_array: np.ndarray,
     unlabeled_pcd: o3d.geometry.PointCloud,
 ) -> np.ndarray:
-
     # label array for unlabeled pcd
     new_labels = np.zeros((np.asarray(unlabeled_pcd.points).shape[0],), dtype=int)
 
@@ -33,7 +32,6 @@ def transfer_labels(
 
 
 def main():
-
     # labeled_pcd = o3d.io.read_point_cloud("/home/kaufmann/Desktop/labeled.pcd")
 
     # for LAS point clouds and numpy labels file
