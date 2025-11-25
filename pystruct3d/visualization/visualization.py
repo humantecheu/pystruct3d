@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import numpy as np
 import open3d as o3d
 
@@ -30,7 +32,7 @@ class Visualization:
         # append to Visualization list
         self.visu_list.append(pcd)
 
-    def bbox_geometry(self, bboxes: list[BBox], color=[0, 1, 0]):
+    def bbox_geometry(self, bboxes: BBox | Sequence[BBox], color=[0, 1, 0]):
         """Creates an open3d line set from a bounding box. Points should be ordered!
 
         Args:
@@ -59,12 +61,11 @@ class Visualization:
             # append to Visualization list
             self.visu_list.append(bounding_box)
 
-        # handle exception so that it accepts Bbox objects and list[BBox]
-        try:
-            for box in bboxes:
-                visualize_bbox(box)
-        except TypeError:
-            visualize_bbox(bboxes)
+        if isinstance(bboxes, BBox):
+            bboxes = [bboxes]
+
+        for box in bboxes:
+            visualize_bbox(box)
 
     def points_geometry(self, points, color=[1, 0.706, 0]):
         """visualize few points e.g., endpoints
