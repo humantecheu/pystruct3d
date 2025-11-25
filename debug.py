@@ -1,8 +1,8 @@
 import numpy as np
 import open3d as o3d
 
-from pystruct3d.visualization import visualization
 from pystruct3d.bbox import bbox
+from pystruct3d.visualization import visualization
 
 
 def random_testing():
@@ -66,7 +66,6 @@ def random_testing():
 
 
 def compare_bbox_fitting():
-
     # load point cloud
     pcd = o3d.io.read_point_cloud("/media/kaufmann/scaleBIM/wall_instance.pcd")
     obb = pcd.get_oriented_bounding_box()

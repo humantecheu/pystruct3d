@@ -1,6 +1,6 @@
 import laspy
-import open3d as o3d
 import numpy as np
+import open3d as o3d
 
 
 def read_las_file(
@@ -16,9 +16,9 @@ def read_las_file(
     Returns:
         o3d.geometry.PointCloud: point cloud with points and colors
     """
-    assert las_path.endswith(".las") or las_path.endswith(
-        ".laz"
-    ), "Check the point cloud input type."
+    assert las_path.endswith(".las") or las_path.endswith(".laz"), (
+        "Check the point cloud input type."
+    )
 
     # Load the LAS file
     print(f"Load las / laz point cloud: {las_path}")

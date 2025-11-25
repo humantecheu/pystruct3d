@@ -1,0 +1,33 @@
+[build-system]
+requires      = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name            = "pystruct3d"
+description     = "Add your description here"
+dynamic         = ["version"]
+readme          = "README.md"
+requires-python = ">=3.12"
+license         = { file = "LICENSE" }
+
+authors = [
+    { name = "Mahdi Chamseddine", email = "mahdi.chamseddine@dfki.de" },
+    { name = "Fabian Kaufmann", email = "fabian.kaufmann@rptu.de" },
+]
+
+dependencies = [
+    "e57>=0.2.1a1",         # probably remove
+    "laspy[laszip]>=2.6.1",
+    "numpy>=2.3.5",
+    "open3d>=0.19.0",
+    "pye57>=0.4.18",
+    "scipy>=1.16.3",
+]
+
+[tool.ruff]
+exclude      = [".eggs", ".git", ".venv"]
+line-length  = 88                         # same as black
+indent-width = 4
+
+[tool.ruff.format]
+quote-style = "double"

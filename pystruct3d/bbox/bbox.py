@@ -225,7 +225,6 @@ class BBox:
         self.corner_points[4:8, 2] = max_zs
 
     def transform_xy(self, xy_dimension: float):
-
         lower_center = np.mean(self.corner_points[:4], axis=0)
         upper_center = np.mean(self.corner_points[4:8], axis=0)
         add_dim = xy_dimension / 2
@@ -470,7 +469,6 @@ class BBox:
         return endpts
 
     def get_center_plane(self):
-
         width_vector = self.corner_points[3] - self.corner_points[0]
         plane_normal = width_vector / np.linalg.norm(width_vector)
 
@@ -486,7 +484,6 @@ class BBox:
         return plane_equation
 
     def get_side_planes(self):
-
         width_vector = self.corner_points[3] - self.corner_points[0]
         plane_normal = width_vector / np.linalg.norm(width_vector)
 
