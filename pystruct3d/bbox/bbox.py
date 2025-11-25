@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import warnings
 
@@ -620,7 +622,7 @@ class BBox:
         self,
         verts: np.ndarray,  # n,
         force_cuboid: bool = True,
-    ) -> np.ndarray:
+    ) -> BBox:
         """Function to get the bounding box from vertices. Vertices are the
         points of an IFC geometry shape as a np.ndarray of shape n, . The vertices
         can be obtained from the IFC geometry using IfcOpenShell as follows:
