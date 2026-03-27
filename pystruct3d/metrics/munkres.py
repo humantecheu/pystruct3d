@@ -1,16 +1,18 @@
+from collections.abc import Callable
+
 import numpy as np
 
 
 class Munkres:
     def __init__(self) -> None:
-        self.cost_matrix = None
-        self.mask_matrix = None
-        self.n = 0
+        self.cost_matrix: np.ndarray = None
+        self.mask_matrix: np.ndarray = None
+        self.n: int = 0
 
-        self.covered_rows = None
-        self.covered_cols = None
+        self.covered_rows: np.ndarray = None
+        self.covered_cols: np.ndarray = None
 
-        self.uncovered_prime = None
+        self.uncovered_prime: tuple[int, int] = None
 
     def compute(self, cost_matrix: np.ndarray, maximize: bool = False):
         max_value = np.max(cost_matrix)
@@ -25,7 +27,7 @@ class Munkres:
         rows, cols = np.where(self.mask_matrix[:n, :m] == 1)
         return np.vstack((rows, cols)).T
 
-    def __step_zero(self, cost_matrix: np.ndarray) -> callable:
+    def __step_zero(self, cost_matrix: np.ndarray) -> tuple[Callable, int, int]:
         n, m = cost_matrix.shape
         if n == m:  # Already square cost_matrix
             max_size = n
@@ -45,13 +47,13 @@ class Munkres:
 
         return self.__step_one, n, m
 
-    def __step_one(self) -> callable:
+    def __step_one(self) -> Callable:
         row_min = np.min(self.cost_matrix, axis=1)[np.newaxis, :].T
         self.cost_matrix -= row_min
 
         return self.__step_two
 
-    def __step_two(self) -> callable:
+    def __step_two(self) -> Callable:
         zeros = np.where(self.cost_matrix == 0)
 
         for r, c in zip(zeros[0], zeros[1]):
@@ -66,7 +68,7 @@ class Munkres:
 
         return self.__step_three
 
-    def __step_three(self) -> int:
+    def __step_three(self) -> Callable | None:
         starred = np.where(self.mask_matrix == 1)
         self.covered_cols[np.unique(starred[1])] = 1
 
@@ -75,7 +77,7 @@ class Munkres:
         else:
             return self.__step_four  # Go to step 4
 
-    def __step_four(self) -> callable:
+    def __step_four(self) -> Callable:
         zeros = self.cost_matrix == 0
         zeros[self.covered_rows == 1, :] = False
         zeros[:, self.covered_cols == 1] = False
@@ -96,7 +98,7 @@ class Munkres:
         else:
             return self.__step_six
 
-    def __step_five(self) -> callable:
+    def __step_five(self) -> Callable:
         path = [self.uncovered_prime]
         while True:
             c = path[-1][1]
@@ -123,7 +125,7 @@ class Munkres:
         self.covered_cols *= 0
         return self.__step_three
 
-    def __step_six(self) -> callable:
+    def __step_six(self) -> Callable:
         # Get smallest uncovered value in cost_matrix
         mask = np.outer(self.covered_rows == 0, self.covered_cols == 0)
         uncovered_cost = self.cost_matrix[mask]

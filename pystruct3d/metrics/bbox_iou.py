@@ -3,11 +3,10 @@ import numpy as np
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.generate_example import create_bbox_lists
 from pystruct3d.metrics.munkres import Munkres
-from pystruct3d.metrics.voxelization_limits import bbox_list2array
 from pystruct3d.visualization.visualization import Visualization
 
 
-def line_intersection_2d(line_1: np.ndarray, line_2: np.ndarray) -> np.ndarray:
+def line_intersection_2d(line_1: np.ndarray, line_2: np.ndarray) -> np.ndarray | None:
     # Each line is defined by two points: (x1, y1, z1) and (x2, y2, z2)
     # Extract the x and y coordinates of the points
     x1, y1, _ = line_1[0]

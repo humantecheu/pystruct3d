@@ -61,7 +61,7 @@ def voxelize_bbox(
 def volumetric_iou(
     groundtruth_bboxes: list[BBox],
     predicted_bboxes: list[BBox],
-    volume_limits: tuple[np.ndarray, np.ndarray] = None,
+    volume_limits: tuple[np.ndarray, np.ndarray] | None = None,
     voxel_size: float = 0.01,
 ):
     if volume_limits is None:

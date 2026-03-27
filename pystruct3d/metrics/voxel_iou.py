@@ -39,7 +39,7 @@ def voxelize_pointcloud(
 def voxel_iou(
     groundtruth_pc: np.ndarray,
     predicted_pc: np.ndarray,
-    volume_limits: tuple[np.ndarray, np.ndarray] = None,
+    volume_limits: tuple[np.ndarray, np.ndarray] | None = None,
     voxel_size: float = 0.01,
 ) -> tuple[float, float]:
     """_summary_
