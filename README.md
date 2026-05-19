@@ -1,56 +1,72 @@
-# Pystruct3d: all you need for bounding boxes
+# pystruct3d
 
-Pystruct3D is an open-source library to support scan-to-BIM workflows. The main purpose is to fit geometry to points of previously segmented instances, e.g., walls. For an accurate reconstruction, it is advised to apply noise filtering to instance points before any reconstruction, as reconstruction procedures might deliver bounding geometry. 
+![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![arXiv](https://img.shields.io/badge/arXiv-2604.24311-b31b1b.svg)](https://arxiv.org/abs/2604.24311)
+
+pystruct3d is an open-source Python library supporting scan-to-BIM workflows as part of the [BIMStruct3D](https://arxiv.org/abs/2604.24311) pipeline. It provides tools for fitting bounding geometry to segmented point cloud instances, evaluating reconstruction accuracy, and visualizing 3D structural elements. For accurate reconstruction it is advised to apply noise filtering to instance points beforehand, as reconstruction procedures may produce bounding geometry.
 
 ![Bounding boxes with points](docs/figures/raw_wall_bboxes_2.png)
 
-Core features include: 
-- a bounding box class with methods to fit, manipulate and get parameters of bounding boxes
-- utilities to transfer point-level annotations from an annotated point cloud to data without annotations
-- methods to evaluate the reconstruction accuracy by comparing reference and reconstructed geometry
-- functions to visualize bounding boxes along with the points
+## Features
 
-Pystruct3d is composed of three distinct modules: (i) The bbox module, which includes a class for bounding box representation along with methods for their fitting, manipulation, and combination. (ii) The metrics module, which is equipped with methods to assess the precision of bounding box reconstructions against established \final{sets of reference bounding boxes}. (iii) The visualization module, featuring a visualizer class designed for the display of bounding boxes, individual points, and point clouds, serving as a tool for testing and diagnostic purposes. The pystruct3d module leverages high-performance libraries like [NumPy](https://github.com/numpy/numpy) and [SciPy](https://github.com/scipy/scipy) to optimize computational efficiency. In the realm of point cloud handling, [Open3D](https://github.com/isl-org/Open3D) is utilized, providing a plethora of methods and algorithms applied in this study. The visualizer class also employs [Open3D](https://github.com/isl-org/Open3D).  
+- **bbox**: Bounding box class with methods for fitting, manipulating, and querying box parameters from point clouds
+- **metrics**: Evaluation metrics for comparing reconstructed against reference geometry, including volumetric IoU (vIoU) for instance-free reconstruction assessment
+- **visualization**: Visualizer class for displaying bounding boxes, points, and point clouds
+- **annotation**: Utilities to transfer point-level annotations from an annotated point cloud to unannotated data
+- **preprocessing**: Point cloud preprocessing including axis alignment and array search utilities
 
-To the current state, reconstruction of cuboid geometry to support building reconstruction is implemented. In future development, methods for other geometry reconstruction, e.g., to support more complex structures like bridges, will be targeted, too. 
+pystruct3d leverages [NumPy](https://github.com/numpy/numpy) and [SciPy](https://github.com/scipy/scipy) for computational efficiency, and [Open3D](https://github.com/isl-org/Open3D) for point cloud handling and visualization.
 
-# Installation
+## Installation
 
-Clone the repository. 
+Clone the repository and install from the root `pystruct3d/` directory:
 
-From root `pystruct3d/`:
-`pip install -e .`
+```shell
+pip install -e .
+```
 
-The `-e` flag is used for development. If you only want to use the module, `pip install . ` is enough for you. 
+The `-e` flag is for development. For use only, `pip install .` is sufficient.
 
-# Python version
+## Requirements
 
-3.10
+- Python 3.12+
+- NumPy
+- SciPy
+- laspy
+- pye57
 
-# Dependencies
+**Visualization only:**
+- Open3D
 
-Numpy
+## Bounding box naming convention
 
-Scipy
+To avoid confusion, there is a naming convention for the dimensions and points of the bounding box:
 
-Laspy
+![Bounding box naming](docs/figures/bounding_box.png)
 
-**For visualization only**
+The length is always the longer horizontal dimension, width is the smaller horizontal dimension, and height is the dimension along the z-axis. Corner points are ordered counter-clockwise from bottom to top. End points are the lower horizontal center line points along the length of the bounding box.
 
-Open3D
+## Related Resources
 
-# Bounding box naming convention
+- **Paper**: [BIMStruct3D: A Fully Automated Hybrid Learning Scan-to-BIM Pipeline with Integrated Topology Refinement](https://arxiv.org/abs/2604.24311)
+- **Dataset**: [DeKH — German Hospital Dataset](https://huggingface.co/datasets/RPTU-FGMB/DeKH) — annotated point clouds and ground-truth IFC BIM models used in the paper
 
-To avoid confusion, there is a naming convention for the dimensions and points of the bounding box: 
+## Citing this Work
 
-![Bounding box naming](docs/figures/bounding_box.jpg)
+```bibtex
+@article{chamseddine2026bimstruct3d,
+    title   = {BIMStruct3D: A Fully Automated Hybrid Learning Scan-to-BIM Pipeline with Integrated Topology Refinement},
+    author  = {Chamseddine, Mahdi and Kaufmann, Fabian and Schellen, Marius and Glock, Christian and Stricker, Didier and Rambach, Jason},
+    journal = {arXiv preprint arXiv:2604.24311},
+    year    = {2026}
+}
+```
 
-Note, that the length is always the longer horizontal dimension, width is the smaller horizontal dimension. The height is the dimension along the z-axis. 
+## Acknowledgement
 
-The corner points are ordered in counter-clockwise order from bottom to the top. The end points are the points of the lower horizontal center line along the length of the bounding box. 
+This research was funded by the European Union as part of the projects: HumanTech (Grant Agreement 101058236) and ShieldBOT (Grant Agreement 101235093).
 
-# ToDo table
+## License
 
-- [ ] methods for bridge reconstruction
-
-# Citation
+MIT License. See [LICENSE](LICENSE) for details.
