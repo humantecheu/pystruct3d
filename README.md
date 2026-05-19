@@ -6,7 +6,7 @@
 
 pystruct3d is an open-source Python library supporting scan-to-BIM workflows as part of the [BIMStruct3D](https://arxiv.org/abs/2604.24311) pipeline. It provides tools for fitting bounding geometry to segmented point cloud instances, evaluating reconstruction accuracy, and visualizing 3D structural elements. For accurate reconstruction it is advised to apply noise filtering to instance points beforehand, as reconstruction procedures may produce bounding geometry.
 
-![Bounding boxes with points](docs/figures/raw_wall_bboxes_2.png)
+![Bounding boxes with points](docs/figures/wall_bbox_reconstruction.png)
 
 ## Features
 
