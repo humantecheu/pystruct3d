@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 
 import numpy as np
+import open3d as o3d
 from scipy.spatial import ConvexHull, QhullError
 
 from pystruct3d.bbox.point_bbox_metrics import (
@@ -164,28 +165,31 @@ class BBox:
             return points[indices], indices
 
     def points_in_bbox(
-        self, points: np.ndarray, tolerance=1e-12
+        self, points: np.ndarray, tolerance: float = 1e-12
     ) -> tuple[np.ndarray, np.ndarray]:
-        """find the points inside a bounding box
+        """Find the points inside the bounding box.
+
+        Uses Open3D OrientedBoundingBox for containment testing.
+        The ``tolerance`` parameter is retained for API compatibility but is
+        not forwarded to the Open3D backend.
 
         Args:
             points (np.ndarray): points, numpy array of shape (n, 3)
-            tolerance (float, optional): tolerance of points distance to bounding box. Defaults to 1e-12.
+            tolerance (float, optional): kept for API compatibility. Defaults to 1e-12.
 
         Returns:
-            np.ndarray: points inliers
+            np.ndarray: inlier points
             np.ndarray: indices of inlier points
         """
-
         try:
-            hull = ConvexHull(self.corner_points)
-            in_hull = np.all(
-                np.add(np.dot(points, hull.equations[:, :-1].T), hull.equations[:, -1])
-                <= tolerance,
-                axis=1,
+            obb = self.to_o3d()
+            indices = np.asarray(
+                obb.get_point_indices_within_bounding_box(
+                    o3d.utility.Vector3dVector(points)
+                )
             )
-            return points[in_hull], np.where(in_hull)[0]
-        except (QhullError, ValueError):
+            return points[indices], indices
+        except (QhullError, ValueError, Exception):
             return np.empty((0,)), np.empty((0,))
 
     def translate(self, translation_vector: np.ndarray):  # shape (3, )
@@ -434,6 +438,32 @@ class BBox:
 
     def as_np_array(self):
         return self.corner_points
+
+    def to_o3d(self) -> o3d.geometry.OrientedBoundingBox:
+        """Convert to an Open3D OrientedBoundingBox.
+
+        The three OBB axes are derived from edges [0]→[1] (length),
+        [0]→[3] (width), and [0]→[4] (height).
+        """
+        center = np.mean(self.corner_points, axis=0)
+        l_vec = self.corner_points[1] - self.corner_points[0]
+        w_vec = self.corner_points[3] - self.corner_points[0]
+        h_vec = self.corner_points[4] - self.corner_points[0]
+        length = np.linalg.norm(l_vec)
+        width = np.linalg.norm(w_vec)
+        height = np.linalg.norm(h_vec)
+        R = np.column_stack([l_vec / length, w_vec / width, h_vec / height])
+        obb = o3d.geometry.OrientedBoundingBox()
+        obb.center = center
+        obb.R = R
+        obb.extent = np.array([length, width, height])
+        return obb
+
+    @classmethod
+    def from_o3d(cls, obb: o3d.geometry.OrientedBoundingBox) -> BBox:
+        """Construct a BBox from an Open3D OrientedBoundingBox."""
+        corners = np.asarray(obb.get_box_points())
+        return cls(corners)
 
     def get_endpts(self):
         """Returns the endpoints

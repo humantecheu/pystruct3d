@@ -1,8 +1,8 @@
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.generate_example import create_bbox_lists
-from pystruct3d.metrics.munkres import Munkres
 from pystruct3d.visualization.visualization import Visualization
 
 
@@ -173,11 +173,8 @@ def mean_bbox_iou(
         for j, pd_bbox in enumerate(predicted_bbox_list):
             iou_matrix[i, j] = bbox_iou(gt_bbox, pd_bbox)
 
-    munkres = Munkres()
-    idx = munkres.compute(iou_matrix, maximize=True)
-    ious = iou_matrix[idx[:, 0], idx[:, 1]]
-
-    return np.mean(ious)
+    row_ind, col_ind = linear_sum_assignment(-iou_matrix)
+    return float(np.mean(iou_matrix[row_ind, col_ind]))
 
 
 def main() -> None:

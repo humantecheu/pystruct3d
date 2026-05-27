@@ -66,8 +66,8 @@ def _run(label: str, stmt, setup=lambda: None, n_runs: int = N_RUNS) -> None:
 
 
 def bench_points_in_bbox() -> None:
-    """ConvexHull-based containment test (scipy)."""
-    print("\npoints_in_bbox  [ConvexHull, scipy]")
+    """OBB containment test via Open3D."""
+    print("\npoints_in_bbox  [OrientedBoundingBox, open3d]")
     _run(
         f"small cloud  ({N_PTS_SMALL:,} pts)", lambda: BBOX.points_in_bbox(SMALL_CLOUD)
     )
