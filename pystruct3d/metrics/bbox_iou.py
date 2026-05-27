@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+from scipy.spatial import KDTree
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.generate_example import create_bbox_lists
@@ -158,20 +159,40 @@ def mean_bbox_iou(
     groundtruth_bbox_list: list[BBox],
     predicted_bbox_list: list[BBox],
 ) -> float:
-    """_summary_
+    """Compute mean IoU between two lists of bounding boxes via optimal assignment.
+
+    Uses a KD-tree on predicted box centroids to skip pairs whose bounding spheres
+    cannot overlap, then solves the assignment problem with scipy's LAP solver.
 
     Args:
-        groundtruth_bbox_list (list[BBox]): _description_
-        predicted_bbox_list (list[BBox]): _description_
+        groundtruth_bbox_list: Ground-truth bounding boxes.
+        predicted_bbox_list: Predicted bounding boxes.
 
     Returns:
-        _type_: _description_
+        Mean IoU of the optimal assignment.
     """
     dim = max(len(groundtruth_bbox_list), len(predicted_bbox_list))
     iou_matrix = np.zeros((dim, dim))
+
+    def _centroid(box: BBox) -> np.ndarray:
+        return np.mean(box.corner_points, axis=0)
+
+    def _half_diag(box: BBox) -> float:
+        cp = box.corner_points
+        return float(np.linalg.norm(cp[6] - cp[0])) / 2.0
+
+    pd_centroids = np.array([_centroid(b) for b in predicted_bbox_list])
+    pd_half_diags = np.array([_half_diag(b) for b in predicted_bbox_list])
+    max_pd_half_diag = float(pd_half_diags.max()) if len(pd_half_diags) else 0.0
+
+    kd = KDTree(pd_centroids)
+
     for i, gt_bbox in enumerate(groundtruth_bbox_list):
-        for j, pd_bbox in enumerate(predicted_bbox_list):
-            iou_matrix[i, j] = bbox_iou(gt_bbox, pd_bbox)
+        gt_center = _centroid(gt_bbox)
+        radius = _half_diag(gt_bbox) + max_pd_half_diag
+        candidate_indices = kd.query_ball_point(gt_center, radius)
+        for j in candidate_indices:
+            iou_matrix[i, j] = bbox_iou(gt_bbox, predicted_bbox_list[j])
 
     row_ind, col_ind = linear_sum_assignment(-iou_matrix)
     return float(np.mean(iou_matrix[row_ind, col_ind]))

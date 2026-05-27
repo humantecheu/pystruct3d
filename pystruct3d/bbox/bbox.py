@@ -87,34 +87,18 @@ class BBox:
                 ordered_points = np.vstack((lower_points, upper_points))
                 self.corner_points = ordered_points
 
-    def rotate(self, angle: float):  # angle in degrees
-        """Rotates the bounding box counter-clockwise around the z-axis and the bounding box center
+    def rotate(self, angle: float) -> None:
+        """Rotate counter-clockwise around the Z-axis through the box centre.
 
         Args:
             angle (float): angle in degrees
         """
-
-        # find the center
         center = np.mean(self.corner_points, axis=0)
-        # perform the rotation
-        rad_angle = np.deg2rad(angle)
-        # Create a rotation matrix for the specified angle and axis
-        axis = np.array([0, 0, 1])
-        c = np.cos(rad_angle)
-        s = np.sin(rad_angle)
-        t = 1 - c
-        axis = axis / np.linalg.norm(axis)
-        x, y, z = axis
-        rot_mat = np.array([
-            [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
-            [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
-            [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
-        ])
-        # translate points to the origin
         self.corner_points -= center
-        # apply the rotation
-        self.corner_points = np.dot(self.corner_points, rot_mat.T)
-        # Translate the points back to the original position
+        c, s = np.cos(np.deg2rad(angle)), np.sin(np.deg2rad(angle))
+        xy = self.corner_points[:, :2].copy()
+        self.corner_points[:, 0] = c * xy[:, 0] - s * xy[:, 1]
+        self.corner_points[:, 1] = s * xy[:, 0] + c * xy[:, 1]
         self.corner_points += center
         self.order_points()
 
@@ -329,6 +313,11 @@ class BBox:
 
         return edges
 
+    def _dimensions(self) -> tuple[float, float]:
+        """Return (length, width) in a single lower_edges() call."""
+        edge_lengths = np.linalg.norm(self.lower_edges(), axis=1)
+        return float(np.max(edge_lengths)), float(np.min(edge_lengths))
+
     def length(self):
         """returns the length (base plane), always larger dimension
 
@@ -518,6 +507,69 @@ class BBox:
         corners = np.asarray(obb.get_box_points())
         return cls(corners)
 
+    @classmethod
+    def from_params(
+        cls,
+        center: np.ndarray,
+        lwh: tuple[float, float, float] | np.ndarray,
+        yaw: float,
+    ) -> BBox:
+        """Construct from detection-style parameters.
+
+        Args:
+            center: (3,) xyz position of the box centre.
+            lwh: (length, width, height) — length is the longer horizontal dim.
+            yaw: rotation around the Z-axis in radians (CCW).
+
+        Returns:
+            BBox with the described geometry.
+        """
+        length, w, h = lwh
+        hl, hw, hh = length / 2, w / 2, h / 2
+        corners = np.array(
+            [
+                [-hl, -hw, -hh],
+                [hl, -hw, -hh],
+                [hl, hw, -hh],
+                [-hl, hw, -hh],
+                [-hl, -hw, hh],
+                [hl, -hw, hh],
+                [hl, hw, hh],
+                [-hl, hw, hh],
+            ],
+            dtype=float,
+        )
+        c, s = np.cos(yaw), np.sin(yaw)
+        xy = corners[:, :2].copy()
+        corners[:, 0] = c * xy[:, 0] - s * xy[:, 1]
+        corners[:, 1] = s * xy[:, 0] + c * xy[:, 1]
+        corners += np.asarray(center, dtype=float)
+        return cls(corners)
+
+    def to_dict(self) -> dict:
+        """Serialise corner points to a JSON-compatible dict."""
+        return {"corner_points": self.corner_points.tolist()}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> BBox:
+        """Reconstruct from a dict produced by ``to_dict()``."""
+        return cls(np.asarray(d["corner_points"]))
+
+    def save(self, path: str) -> None:
+        """Save corner points to a ``.npy`` file."""
+        np.save(path, self.corner_points)
+
+    @classmethod
+    def load(cls, path: str) -> BBox:
+        """Load corner points from a ``.npy`` file written by ``save()``."""
+        return cls(np.load(path))
+
+    def iou(self, other: BBox) -> float:
+        """Compute 3D IoU with another BBox."""
+        from pystruct3d.metrics.bbox_iou import bbox_iou
+
+        return float(bbox_iou(self, other))
+
     def get_endpts(self):
         """Returns the endpoints
 
@@ -567,19 +619,10 @@ class BBox:
 
         return plane_equation1, plane_equation2
 
-    def volume(self):
-        """calculate the volume of the bounding box
-
-        Returns:
-            float: volume
-        """
-        box_length = self.length()
-        box_width = self.width()
-        box_heigth = self.height()
-
-        volume = box_length * box_width * box_heigth
-
-        return volume
+    def volume(self) -> float:
+        """Return the volume of the bounding box."""
+        length, width = self._dimensions()
+        return length * width * self.height()
 
     def fit_axis_aligned(self, points: np.ndarray):
         """fits an axis aligned bounding box to a set of points
@@ -734,85 +777,29 @@ class BBox:
         return self
 
     def from_cv4aec(self, cv4aec_dict: dict):
-        """Create bounding boxes from cv4aec parameters
+        """Create bounding boxes from cv4aec parameters.
+
+        .. deprecated::
+            Use :func:`pystruct3d.io.cv4aec.bbox_from_cv4aec` instead.
 
         Args:
             cv4aec_dict (dict): dictionary of wall, door or column parameter
         """
-        # distinguish cases
-        # 1. case: start_pt, end_pt, width, height
-        if "start_pt" in cv4aec_dict:
-            start_pt = cv4aec_dict["start_pt"]
-            end_pt = cv4aec_dict["end_pt"]
-            width = cv4aec_dict["width"]
-            height = cv4aec_dict["height"]
+        warnings.warn(
+            "BBox.from_cv4aec() is deprecated; use pystruct3d.io.cv4aec.bbox_from_cv4aec() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from pystruct3d.io.cv4aec import bbox_from_cv4aec
 
-            start_vec = np.asarray(start_pt)
-            end_vec = np.asarray(end_pt)
-            center_dir = end_vec - start_vec
-
-            # we know that the base plane of the bounding box is horizontal
-            offset_dir = np.cross(center_dir, np.asarray([0, 0, 1]))
-            offset_norm = offset_dir / np.linalg.norm(offset_dir)
-            self.corner_points[0] = start_vec + 0.5 * width * offset_norm
-            self.corner_points[1] = start_vec - 0.5 * width * offset_norm
-            self.corner_points[2] = end_vec + 0.5 * width * offset_norm
-            self.corner_points[3] = end_vec - 0.5 * width * offset_norm
-            self.corner_points[4] = self.corner_points[0]
-            self.corner_points[5] = self.corner_points[1]
-            self.corner_points[6] = self.corner_points[2]
-            self.corner_points[7] = self.corner_points[3]
-            self.corner_points[:-4:, 2] += height
-            self.order_points()
-
-        elif "loc" in cv4aec_dict:
-            location = cv4aec_dict["loc"]
-            bx_width = cv4aec_dict["width"]
-            bx_depth = cv4aec_dict["depth"]
-            bx_height = cv4aec_dict["height"]
-            rotation = cv4aec_dict["rotation"]
-
-            loc_vec = np.asarray(location)
-            self.corner_points[0] = loc_vec - np.asarray([
-                0.5 * bx_width,
-                0.5 * bx_depth,
-                0.0,
-            ])
-            self.corner_points[1] = loc_vec + np.asarray([
-                0.5 * bx_width,
-                -0.5 * bx_depth,
-                0,
-            ])
-            self.corner_points[2] = loc_vec + np.asarray([
-                0.5 * bx_width,
-                0.5 * bx_depth,
-                0,
-            ])
-            self.corner_points[3] = loc_vec + np.asarray([
-                -0.5 * bx_width,
-                0.5 * bx_depth,
-                0,
-            ])
-            self.corner_points[4] = self.corner_points[0]
-            self.corner_points[5] = self.corner_points[1]
-            self.corner_points[6] = self.corner_points[2]
-            self.corner_points[7] = self.corner_points[3]
-            self.corner_points[:-4:, 2] += bx_height
-            self.order_points()
-            if round(cv4aec_dict["rotation"], 0) != 0:
-                self.rotate(rotation)
-
-        else:
-            warnings.warn(
-                "from_cv4aec: no valid key found in dict (expected 'start_pt' or 'loc').",
-                stacklevel=2,
-            )
+        box = bbox_from_cv4aec(cv4aec_dict)
+        self.corner_points = box.corner_points
 
     def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0"):
         """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
-        Output_styles:
-        "start_pt": for walls
-        "loc" for doors and columns
+
+        .. deprecated::
+            Use :func:`pystruct3d.io.cv4aec.bbox_to_cv4aec` instead.
 
         Args:
             output_style (str, optional): Either start_pt for walls or loc for doors and columns. Defaults to "start_pt".
@@ -820,27 +807,13 @@ class BBox:
             host_id (str, optional): ID of host element. Defaults to "0".
 
         Returns:
-            dict: Dictionary accourding to output style specified
+            dict: Dictionary according to output style specified
         """
-        if output_style == "loc":
-            data_dict = {
-                "id": element_id,
-                "width": self.length(),
-                "depth": self.width(),
-                "height": self.height(),
-                "loc": list(np.mean(self.corner_points[0:3], axis=0)),
-                "rotation": self.angle(),
-                "host_id": host_id,
-            }
-        elif output_style == "start_pt":
-            side_vector = self.corner_points[2] - self.corner_points[1]
-            to_base_vec = 0.5 * side_vector
-            data_dict = {
-                "id": element_id,
-                "start_pt": list(self.corner_points[0] + to_base_vec),
-                "end_pt": list(self.corner_points[1] + to_base_vec),
-                "width": self.width(),
-                "height": self.height(),
-            }
+        warnings.warn(
+            "BBox.to_cv4aec() is deprecated; use pystruct3d.io.cv4aec.bbox_to_cv4aec() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        from pystruct3d.io.cv4aec import bbox_to_cv4aec
 
-        return data_dict
+        return bbox_to_cv4aec(self, output_style, element_id, host_id)
