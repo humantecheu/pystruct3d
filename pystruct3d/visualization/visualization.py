@@ -50,7 +50,7 @@ class Visualization:
                 [0, 4], [1, 5], [2, 6], [3, 7]   # Side edges
                 ]
             # fmt:on
-            colors = [color for i in range(len(lines))]
+            colors = [color for _ in range(len(lines))]
             # initialize line set with the corner points
             bounding_box = o3d.geometry.LineSet()
             bounding_box.points = o3d.utility.Vector3dVector(
@@ -88,9 +88,6 @@ class Visualization:
         self, window_name="pystruct3D Visualizer", w_width=2560, w_height=1440
     ):
         """visualize list of geometries"""
-        # open3d coordinate frame
-        coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame()
-        # self.visu_list.append(coord_frame)
         if self.visu_list:
             o3d.visualization.draw_geometries(
                 self.visu_list,

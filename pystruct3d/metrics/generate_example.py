@@ -106,7 +106,7 @@ def shift_bounding_boxes(
 
     # Randomly select boxes to shift
     indices_to_shift = np.random.choice(
-        len(bounding_boxes), size=n_boxes_to_shift, replace=False
+        len(bounding_boxes), size=int(n_boxes_to_shift), replace=False
     )
 
     for i in indices_to_shift:

@@ -12,13 +12,12 @@ def min_zero_row(zero_mat, mark_zero):
     min_row = [99999, -1]
 
     for row_num in range(zero_mat.shape[0]):
-        if np.sum(zero_mat[row_num] == True) > 0 and min_row[0] > np.sum(
-            zero_mat[row_num] == True
-        ):
-            min_row = [np.sum(zero_mat[row_num] == True), row_num]
+        row_sum = np.sum(zero_mat[row_num])
+        if row_sum > 0 and min_row[0] > row_sum:
+            min_row = [row_sum, row_num]
 
     # Marked the specific row and column as False
-    zero_index = np.where(zero_mat[min_row[1]] == True)[0][0]
+    zero_index = np.where(zero_mat[min_row[1]])[0][0]
     mark_zero.append((min_row[1], zero_index))
     zero_mat[min_row[1], :] = False
     zero_mat[:, zero_index] = False
@@ -57,7 +56,7 @@ def mark_matrix(mat):
             row_array = zero_bool_mat[non_marked_row[i], :]
             for j in range(row_array.shape[0]):
                 # Step 2-2-2
-                if row_array[j] == True and j not in marked_cols:
+                if row_array[j] and j not in marked_cols:
                     # Step 2-2-3
                     marked_cols.append(j)
                     check_switch = True

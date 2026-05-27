@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 
@@ -76,10 +78,6 @@ def calculate_relative_position(
         dot_result[4] = point_dot - plane_dot[4]
         dot_result[5] = -point_dot - plane_dot[5]
     except AssertionError:
-        print(
-            "Use generalized but slower solution. Normalized normal vectors NOT equal but opposite"
-        )
-
         """Mathematical explanation:
         dot_result = (point - plane_point) . plane_normal
                 = point . plane_normal - plane_point . plane_normal
@@ -221,7 +219,11 @@ def calculate_distances(
                 axis=1,
             )[np.newaxis].T
         else:
-            print("Weird behaviour, debug")
+            warnings.warn(
+                f"Unhandled case in calculate_distances: {name!r}",
+                RuntimeWarning,
+                stacklevel=2,
+            )
 
     return shortest_distance
 

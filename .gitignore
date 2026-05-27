@@ -216,9 +216,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# AI
+# AI / planning
 AGENTS.md
 CLAUDE.md
 GEMINI.md
+PLAN.md
 
 *.npy

@@ -5,14 +5,14 @@ import numpy as np
 
 class Munkres:
     def __init__(self) -> None:
-        self.cost_matrix: np.ndarray = None
-        self.mask_matrix: np.ndarray = None
+        self.cost_matrix: np.ndarray = np.empty((0, 0))
+        self.mask_matrix: np.ndarray = np.empty((0, 0))
         self.n: int = 0
 
-        self.covered_rows: np.ndarray = None
-        self.covered_cols: np.ndarray = None
+        self.covered_rows: np.ndarray = np.empty(0)
+        self.covered_cols: np.ndarray = np.empty(0)
 
-        self.uncovered_prime: tuple[int, int] = None
+        self.uncovered_prime: tuple[int, int] = (-1, -1)
 
     def compute(self, cost_matrix: np.ndarray, maximize: bool = False):
         max_value = np.max(cost_matrix)

@@ -4,7 +4,6 @@ import numpy as np
 from scipy.spatial import KDTree
 
 from pystruct3d.bbox import utils
-from pystruct3d.bbox.bbox import BBox
 
 
 def get_centroids(bbox_list):
@@ -34,39 +33,6 @@ def deviation(bbox_list, gt_list):
 
 
 def main():
-    # arr = np.load(
-    #     "/home/kaufmann/scaleBIM/data/08_ShortOffice_01_F1_raw_wall_bboxes.npy"
-    # )
-    bx1 = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [5.0, 0.0, 0.0],
-            [5.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 3.0],
-            [5.0, 0.0, 3.0],
-            [5.0, 1.0, 3.0],
-            [0.0, 1.0, 3.0],
-        ]
-    )
-    bx1_gt = bx1 + 0.2
-    bx2 = np.array(
-        [
-            [0.0, 0.0, 0.0],
-            [5.0, 0.0, 0.0],
-            [5.0, 1.0, 0.0],
-            [0.0, 1.0, 0.0],
-            [0.0, 0.0, 3.0],
-            [5.0, 0.0, 3.0],
-            [5.0, 1.0, 3.0],
-            [0.0, 1.0, 3.0],
-        ]
-    )
-    bx2_gt = bx2 + 0.2
-    # get_centroids(arr)
-    # bx_list = [BBox(bx1), BBox(bx2)]
-    # gt_bx_list = [BBox(bx1_gt), BBox(bx2_gt)]
-    # deviation(bx_list, gt_bx_list)
     bx_array = np.load(
         "/home/kaufmann/scaleBIM/data/08_ShortOffice_01_F1_raw_wall_bboxes.npy"
     )

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import time
 import warnings
 
 import numpy as np
-import scipy
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, QhullError
 
 from pystruct3d.bbox.point_bbox_metrics import (
     calculate_distances,
@@ -16,9 +14,10 @@ from pystruct3d.bbox.point_bbox_metrics import (
 class BBox:
     """Class to represent bounding boxes by 8 corner points."""
 
-    def __init__(self, corner_points=np.zeros((8, 3))) -> None:  # shape (8, 3)
+    def __init__(self, corner_points: np.ndarray | None = None) -> None:  # shape (8, 3)
+        if corner_points is None:
+            corner_points = np.zeros((8, 3))
         self.corner_points = corner_points
-        # ensure the corners are ordered as the BBox is initialized
         if np.any(self.corner_points):
             self.order_points()
 
@@ -179,24 +178,14 @@ class BBox:
         """
 
         try:
-            # convex hull
             hull = ConvexHull(self.corner_points)
-
-            # Get array of boolean values indicating in hull if True
-            # print(np.dot(points, hull.equations[:, :-1].T).shape)
-            # exit()
             in_hull = np.all(
                 np.add(np.dot(points, hull.equations[:, :-1].T), hull.equations[:, -1])
                 <= tolerance,
                 axis=1,
-            )  # tolerance could be set to zero, not tested
-
-            # Get the actual points inside the box
-            points_in_box = points[in_hull]
-            indices = np.where(in_hull == True)[0]
-
-            return points_in_box, indices
-        except:
+            )
+            return points[in_hull], np.where(in_hull)[0]
+        except (QhullError, ValueError):
             return np.empty((0,)), np.empty((0,))
 
     def translate(self, translation_vector: np.ndarray):  # shape (3, )
@@ -380,7 +369,6 @@ class BBox:
         """
         # rotate bounding box first same angle as parent
         self.rotate(np.negative(self.angle() - parent_bbox.angle()))
-        print("-- project bounding box into parent")
         # translate to closest surface
         # Get plane equation ax + by + cz + d = 0
         # get normal vector from parent and normalize
@@ -479,10 +467,7 @@ class BBox:
         # plane equation: ax + by + cx + d = 0
 
         d = np.negative(np.sum(plane_normal * plane_point))
-
         plane_equation = np.append(plane_normal, d)
-        print(plane_equation)
-
         return plane_equation
 
     def get_side_planes(self):
@@ -608,15 +593,15 @@ class BBox:
             self.order_points()
 
         except ValueError:
-            print("-- no points to fit bounding box, passing ...")
+            warnings.warn("No points to fit bounding box.", stacklevel=2)
 
-        except scipy.spatial._qhull.QhullError:
-            print("-- 1d convex hull, passing ...")
+        except QhullError:
+            warnings.warn("Degenerate point set (1-D convex hull).", stacklevel=2)
 
         return self
 
-    def fit_minimal():
-        pass
+    def fit_minimal(self) -> "BBox":
+        raise NotImplementedError
 
     def bbox_from_verts(
         self,
@@ -718,8 +703,6 @@ class BBox:
             bx_depth = cv4aec_dict["depth"]
             bx_height = cv4aec_dict["height"]
             rotation = cv4aec_dict["rotation"]
-            print("ID:", cv4aec_dict["id"])
-            print("cv4aec location:", location)
 
             loc_vec = np.asarray(location)
             self.corner_points[0] = loc_vec - np.asarray(
@@ -744,7 +727,10 @@ class BBox:
                 self.rotate(rotation)
 
         else:
-            print("No valid key found, passing ...")
+            warnings.warn(
+                "from_cv4aec: no valid key found in dict (expected 'start_pt' or 'loc').",
+                stacklevel=2,
+            )
 
     def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0"):
         """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
