@@ -105,13 +105,11 @@ class BBox:
         t = 1 - c
         axis = axis / np.linalg.norm(axis)
         x, y, z = axis
-        rot_mat = np.array(
-            [
-                [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
-                [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
-                [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
-            ]
-        )
+        rot_mat = np.array([
+            [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
+            [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
+            [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
+        ])
         # translate points to the origin
         self.corner_points -= center
         # apply the rotation
@@ -606,83 +604,68 @@ class BBox:
         ])
         # fmt:on
 
-    def fit_horizontal_aligned(self, points):
-        """Fits a minimum horizontal aligned bounding box to the points. The minimum
-        bounding box is identified as the one with the minimal volume. The fitting is
-        done based on the 2D projection of the points in the xy plane. A convex hull is
-        fitted first, and the points are rotated along the x-axis per edge. Then an
-        axis aligned bounding box is fitted to the rotated points.
+    def fit_horizontal_aligned(self, points: np.ndarray) -> "BBox":
+        """Fit a minimum-volume Z-aligned bounding box (rotating calipers).
+
+        Projects to XY, builds a convex hull, then tests one candidate rotation
+        per hull edge. The AABB min/max for each rotation is computed using only
+        the hull vertices (O(h) ≪ O(n)), since they contain all extreme points.
+        Z extent is rotation-independent and computed once.
 
         Args:
-            points (np.ndarray): points, shape (n, 3)
+            points: shape (n, 3)
         """
-        # delete 0s from Z dimension
-        points2d = points[:, :2]
-
         try:
-            hull = ConvexHull(points2d)
-
-            conv_hull_points = points2d[hull.simplices]
-
-            # print(f"conv_hull_points{conv_hull_points.shape}")
-
-            edges_xy = np.diff(conv_hull_points, axis=1).reshape(-1, 2)
-            # print(edges_xy.shape)
-
-            angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))
-
-            # print(np.rad2deg(angles))
-            candidate_volumes = np.array([])
-            rotation_matrices = np.empty((0, 3, 3))
-            candidate_boxes = np.empty((0, 8, 3))
-            for angle in angles:
-                # Create a rotation matrix for the specified angle and axis
-                axis = np.array([0, 0, 1])
-                c = np.cos(angle)
-                s = np.sin(angle)
-                t = 1 - c
-                axis = axis / np.linalg.norm(axis)
-                x, y, z = axis
-                # fmt:off
-                rot_mat = np.array(
-                    [
-                        [t * x**2 + c, t * x * y - s * z, t * x * z + s * y],
-                        [t * x * y + s * z, t * y**2 + c, t * y * z - s * x],
-                        [t * x * z - s * y, t * y * z + s * x, t * z**2 + c],
-                    ]
-                )
-                rotation_matrices = np.vstack((rotation_matrices, rot_mat.reshape(1, 3, 3)))
-                # fmt:on
-                # apply the rotation
-                rot_points = np.dot(points, rot_mat.T)
-
-                # fit axis aligned bounding box
-                box_canidate = BBox()
-                box_canidate.fit_axis_aligned(rot_points)
-                box_points = box_canidate.corner_points
-                candidate_boxes = np.vstack(
-                    (candidate_boxes, box_points.reshape(1, 8, 3))
-                )
-                cand_volume = box_canidate.volume()
-                candidate_volumes = np.append(candidate_volumes, cand_volume)
-
-            # print(candidate_volumes)
-            # print(f"shape of rot matrices, {rotation_matrices.shape}")
-
-            min_idx = np.argmin(candidate_volumes)
-            min_box_points = candidate_boxes[min_idx]
-            min_box_points = np.dot(
-                min_box_points, np.linalg.inv(rotation_matrices[min_idx]).T
-            )
-            self.corner_points = min_box_points
-            self.order_points()
-
+            hull = ConvexHull(points[:, :2])
         except ValueError:
             warnings.warn("No points to fit bounding box.", stacklevel=2)
-
+            return self
         except QhullError:
             warnings.warn("Degenerate point set (1-D convex hull).", stacklevel=2)
+            return self
 
+        # Candidate angles: one per hull edge
+        edges_xy = np.diff(points[:, :2][hull.simplices], axis=1).reshape(-1, 2)
+        angles = np.abs(np.arctan2(edges_xy[:, 1], edges_xy[:, 0]))  # (E,)
+
+        # Rotate only the unique hull vertices — O(h) not O(n)
+        hx, hy = points[:, :2][hull.vertices].T  # (h,) each
+        c, s = np.cos(angles), np.sin(angles)  # (E,)
+
+        # Rotated XY coords for all edges × all hull vertices: (E, h)
+        xr = c[:, None] * hx[None, :] - s[:, None] * hy[None, :]
+        yr = s[:, None] * hx[None, :] + c[:, None] * hy[None, :]
+
+        # AABB extents per candidate rotation
+        x_lo, x_hi = xr.min(axis=1), xr.max(axis=1)  # (E,)
+        y_lo, y_hi = yr.min(axis=1), yr.max(axis=1)
+        z_lo, z_hi = points[:, 2].min(), points[:, 2].max()
+
+        volumes = (x_hi - x_lo) * (y_hi - y_lo) * (z_hi - z_lo)
+        n = np.argmin(volumes)
+        cn, sn = c[n], s[n]
+
+        # 8 corners of the winning AABB in the rotated frame
+        corners_rot = np.array([
+            [x_lo[n], y_lo[n], z_lo],
+            [x_hi[n], y_lo[n], z_lo],
+            [x_hi[n], y_hi[n], z_lo],
+            [x_lo[n], y_hi[n], z_lo],
+            [x_lo[n], y_lo[n], z_hi],
+            [x_hi[n], y_lo[n], z_hi],
+            [x_hi[n], y_hi[n], z_hi],
+            [x_lo[n], y_hi[n], z_hi],
+        ])
+
+        # Inverse rotation (R^{-1} = R^T for z-axis rotation):
+        # x_orig = x_rot * cos + y_rot * sin
+        # y_orig = -x_rot * sin + y_rot * cos
+        corners = corners_rot.copy()
+        corners[:, 0] = corners_rot[:, 0] * cn + corners_rot[:, 1] * sn
+        corners[:, 1] = -corners_rot[:, 0] * sn + corners_rot[:, 1] * cn
+
+        self.corner_points = corners
+        self.order_points()
         return self
 
     def fit_minimal(self) -> "BBox":
@@ -790,18 +773,26 @@ class BBox:
             rotation = cv4aec_dict["rotation"]
 
             loc_vec = np.asarray(location)
-            self.corner_points[0] = loc_vec - np.asarray(
-                [0.5 * bx_width, 0.5 * bx_depth, 0.0]
-            )
-            self.corner_points[1] = loc_vec + np.asarray(
-                [0.5 * bx_width, -0.5 * bx_depth, 0]
-            )
-            self.corner_points[2] = loc_vec + np.asarray(
-                [0.5 * bx_width, 0.5 * bx_depth, 0]
-            )
-            self.corner_points[3] = loc_vec + np.asarray(
-                [-0.5 * bx_width, 0.5 * bx_depth, 0]
-            )
+            self.corner_points[0] = loc_vec - np.asarray([
+                0.5 * bx_width,
+                0.5 * bx_depth,
+                0.0,
+            ])
+            self.corner_points[1] = loc_vec + np.asarray([
+                0.5 * bx_width,
+                -0.5 * bx_depth,
+                0,
+            ])
+            self.corner_points[2] = loc_vec + np.asarray([
+                0.5 * bx_width,
+                0.5 * bx_depth,
+                0,
+            ])
+            self.corner_points[3] = loc_vec + np.asarray([
+                -0.5 * bx_width,
+                0.5 * bx_depth,
+                0,
+            ])
             self.corner_points[4] = self.corner_points[0]
             self.corner_points[5] = self.corner_points[1]
             self.corner_points[6] = self.corner_points[2]
