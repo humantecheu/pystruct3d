@@ -6,11 +6,6 @@ import numpy as np
 import open3d as o3d
 from scipy.spatial import ConvexHull, QhullError
 
-from pystruct3d.bbox.point_bbox_metrics import (
-    calculate_distances,
-    calculate_relative_position,
-)
-
 
 class BBox:
     """Class to represent bounding boxes by 8 corner points."""
@@ -128,41 +123,28 @@ class BBox:
     def points_in_bbox_probability(
         self,
         points: np.ndarray,
-        probability_threshold=0,
-        in_2d=False,
+        probability_threshold: float = 0,
+        in_2d: bool = False,
     ):
-        def calculate_pdf():
-            shortest_distance = calculate_distances(
-                points,
-                plane_distances,
-                positive_direction,
-                self.corner_points,
-            )
-            sigma = self.width() / 2
-            return np.exp(-0.5 * ((shortest_distance / sigma) ** 2))
+        """Deprecated. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().
 
-        if in_2d and probability_threshold > 0:
-            warnings.warn("probability_threshold is ignored when applied to 2D only.")
-
-        plane_distances, positive_direction = calculate_relative_position(
-            points,
-            self.corner_points,
-            probability_threshold > 0,
+        - Hard 3D containment  → points_in_bbox(points)
+        - 2D footprint test    → points_in_bbox_2d(points)
+        - Soft Gaussian        → points_in_bbox_soft(points, threshold)
+        """
+        warnings.warn(
+            "points_in_bbox_probability is deprecated. "
+            "Use points_in_bbox() for hard 3D containment, "
+            "points_in_bbox_2d() for 2D footprint testing, or "
+            "points_in_bbox_soft(points, threshold) for Gaussian soft membership.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-
-        if not in_2d and probability_threshold > 0:
-            pdf = calculate_pdf()
-            indices = (pdf > probability_threshold).squeeze()
-            return points[indices], indices, pdf
-        elif in_2d:
-            # Ignore the top and bottom planes
-            indices = np.nonzero(~positive_direction[:4].any(axis=0))
-            return points[indices], indices
-        else:
-            # A point which is "below" all planes falls inside the bbox
-            # indices = np.where(~positive_direction.any(axis=0))  # [0].T
-            indices = np.nonzero(~positive_direction.any(axis=0))  # [0].T
-            return points[indices], indices
+        if in_2d:
+            return self.points_in_bbox_2d(points)
+        if probability_threshold > 0:
+            return self.points_in_bbox_soft(points, probability_threshold)
+        return self.points_in_bbox(points)
 
     def points_in_bbox(
         self, points: np.ndarray, tolerance: float = 1e-12
@@ -191,6 +173,79 @@ class BBox:
             return points[indices], indices
         except (QhullError, ValueError, Exception):
             return np.empty((0,)), np.empty((0,))
+
+    def points_in_bbox_2d(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """Find points within the 2D horizontal footprint of the bounding box.
+
+        Only the four vertical side planes are tested; top and bottom faces
+        are ignored. Useful for 2D polygon containment checks in 3D space.
+
+        Implemented as two slab tests on the pair of outward normals n0 / n1
+        (one per pair of parallel side faces), avoiding the full 6-plane
+        calculation.
+
+        Args:
+            points: array of shape (n, 3)
+
+        Returns:
+            inlier_points: shape (m, 3)
+            indices: integer indices of inlier points into the input array
+        """
+        cp = self.corner_points
+        n0 = np.cross(cp[1] - cp[0], cp[4] - cp[0])
+        n0 /= np.linalg.norm(n0)
+        n1 = np.cross(cp[2] - cp[1], cp[5] - cp[1])
+        n1 /= np.linalg.norm(n1)
+
+        p0 = points @ n0
+        p1 = points @ n1
+
+        d0a, d0b = float(cp[0] @ n0), float(cp[2] @ n0)
+        d1a, d1b = float(cp[1] @ n1), float(cp[3] @ n1)
+
+        inside = (
+            (p0 >= min(d0a, d0b))
+            & (p0 <= max(d0a, d0b))
+            & (p1 >= min(d1a, d1b))
+            & (p1 <= max(d1a, d1b))
+        )
+        indices = np.flatnonzero(inside)
+        return points[indices], indices
+
+    def points_in_bbox_soft(
+        self, points: np.ndarray, threshold: float, *, sigma: float = 0.1
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Soft Gaussian containment using distance to the nearest bbox surface.
+
+        Interior points always receive pdf = 1.0. Exterior points receive a
+        Gaussian probability that decays with distance to the nearest surface
+        feature (face, edge, or corner). Points where pdf > ``threshold`` are
+        returned as inliers.
+
+        Args:
+            points: array of shape (n, 3)
+            threshold: probability threshold in (0, 1]
+            sigma: Gaussian standard deviation in metres. Controls how quickly
+                the probability falls off outside the box. Defaults to 0.1 m
+                (≈ 1 σ at 10 cm), which suits typical LiDAR/photogrammetry
+                noise levels in scan-to-BIM workflows.
+
+        Returns:
+            inlier_points: points where pdf > threshold, shape (m, 3)
+            indices: integer indices of inlier points into the input array
+            pdf: Gaussian probability for all input points, shape (n,)
+        """
+        mesh = o3d.geometry.TriangleMesh.create_from_oriented_bounding_box(
+            self.to_o3d(), scale=[1, 1, 1], create_uv_map=False
+        )
+        scene = o3d.t.geometry.RaycastingScene()
+        scene.add_triangles(o3d.t.geometry.TriangleMesh.from_legacy(mesh))
+        pts_t = o3d.core.Tensor(points.astype(np.float32), dtype=o3d.core.Dtype.Float32)
+        sdf = scene.compute_signed_distance(pts_t).numpy()
+        distance = np.maximum(sdf, 0.0)  # interior points → 0 → pdf = 1.0
+        pdf = np.exp(-0.5 * (distance / sigma) ** 2)
+        indices = np.flatnonzero(pdf > threshold)
+        return points[indices], indices, pdf
 
     def translate(self, translation_vector: np.ndarray):  # shape (3, )
         """translate the bounding box along a given vector

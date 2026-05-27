@@ -76,25 +76,29 @@ def bench_points_in_bbox() -> None:
     )
 
 
-def bench_points_in_bbox_probability() -> None:
-    """Plane-normal dot-product containment + soft probability."""
-    print("\npoints_in_bbox_probability  [dot-product, no threshold]")
+def bench_points_in_bbox_2d() -> None:
+    """2D footprint containment via plane-normal dot product (ignores Z)."""
+    print("\npoints_in_bbox_2d  [dot-product, side planes only]")
     _run(
         f"small cloud  ({N_PTS_SMALL:,} pts)",
-        lambda: BBOX.points_in_bbox_probability(SMALL_CLOUD),
+        lambda: BBOX.points_in_bbox_2d(SMALL_CLOUD),
     )
     _run(
         f"large cloud  ({N_PTS_LARGE:,} pts)",
-        lambda: BBOX.points_in_bbox_probability(LARGE_CLOUD),
+        lambda: BBOX.points_in_bbox_2d(LARGE_CLOUD),
     )
-    print("points_in_bbox_probability  [dot-product, threshold=0.7]")
+
+
+def bench_points_in_bbox_soft() -> None:
+    """Soft Gaussian containment (distance to surface, threshold=0.7)."""
+    print("\npoints_in_bbox_soft  [Gaussian, threshold=0.7]")
     _run(
         f"small cloud  ({N_PTS_SMALL:,} pts)",
-        lambda: BBOX.points_in_bbox_probability(SMALL_CLOUD, probability_threshold=0.7),
+        lambda: BBOX.points_in_bbox_soft(SMALL_CLOUD, 0.7),
     )
     _run(
         f"large cloud  ({N_PTS_LARGE:,} pts)",
-        lambda: BBOX.points_in_bbox_probability(LARGE_CLOUD, probability_threshold=0.7),
+        lambda: BBOX.points_in_bbox_soft(LARGE_CLOUD, 0.7),
     )
 
 
@@ -142,7 +146,8 @@ def bench_order_points() -> None:
 
 BENCHMARKS = [
     bench_points_in_bbox,
-    bench_points_in_bbox_probability,
+    bench_points_in_bbox_2d,
+    bench_points_in_bbox_soft,
     bench_fit_horizontal_aligned,
     bench_voxelize_bbox,
     bench_mean_bbox_iou,

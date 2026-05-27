@@ -23,7 +23,7 @@ sample_points = np.array(
 ref_box = bbox.BBox(sample_points)
 
 start = time.time()
-pts_1, idx_1, _ = ref_box.points_in_bbox_probability(rand_pts, 0.7)
+pts_1, idx_1, _ = ref_box.points_in_bbox_soft(rand_pts, 0.7)
 print(time.time() - start)
 
 visu = visualization.Visualization()

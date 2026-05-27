@@ -36,8 +36,7 @@ def voxelize_bbox(
     x, y, z = np.meshgrid(x_range, y_range, z_range, indexing="ij")
     midpoints = np.stack((x, y, z), axis=-1).reshape(-1, 3)
 
-    # Check which midpoints are inside the convex hull
-    points_in_bbox, _ = bbox.points_in_bbox_probability(midpoints)
+    points_in_bbox, _ = bbox.points_in_bbox(midpoints)
     indices = ((points_in_bbox - min_vals) / voxel_size).astype(int)
 
     # fmt: off

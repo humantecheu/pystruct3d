@@ -88,10 +88,10 @@ def bbox_2d_intersection(bbox_1: BBox, bbox_2: BBox):
     else:
         vertices_2d = np.array(vertices_2d)
 
-    points, _ = bbox_1.points_in_bbox_probability(bbox_2_2d, 0, True)
+    points, _ = bbox_1.points_in_bbox_2d(bbox_2_2d)
     if points.any():
         vertices_2d = np.vstack((vertices_2d, points[:, :2]))
-    points, _ = bbox_2.points_in_bbox_probability(bbox_1_2d, 0, True)
+    points, _ = bbox_2.points_in_bbox_2d(bbox_1_2d)
     if points.any():
         vertices_2d = np.vstack((vertices_2d, points[:, :2]))
 
