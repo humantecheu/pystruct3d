@@ -1,75 +1,61 @@
 import laspy
 import numpy as np
-import open3d as o3d
+from pathlib import Path
 
 
-def read_las_file(
-    las_path: str,
-    color_division: float = 65025,
-) -> o3d.geometry.PointCloud:
-    """Read a LAS / LAZ file into an Open3D point cloud.
+def read_las_file(las_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+    """Read a LAS / LAZ file.
 
     Args:
         las_path: path to a .las or .laz file.
-        color_division: divisor for RGB values (255 for 8-bit, 65025 for 16-bit).
-            Defaults to 65025.
 
     Returns:
-        Open3D PointCloud with XYZ coordinates and normalised RGB colours.
+        Tuple of (xyz, rgb) arrays shaped (N, 3). RGB is normalised to [0, 1].
     """
-    assert las_path.endswith(".las") or las_path.endswith(".laz"), (
-        "Check the point cloud input type."
+    if isinstance(las_path, str):
+        las_path = Path(las_path)
+
+    assert las_path.suffix in [".las", ".laz"], (
+        f"File format '{las_path.suffix}' must be '.las' or '.laz'."
     )
 
     las_file = laspy.read(las_path)
 
-    xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()
+    xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()  # type: ignore
     try:
-        rgb = (
-            np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()
-            / color_division
-        )
+        rgb = np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()  # type: ignore
+        if np.max(rgb) > np.iinfo(np.uint8).max:
+            rgb = rgb / np.iinfo(np.uint16).max
+        elif np.max(rgb) > 1:
+            rgb = rgb / np.iinfo(np.uint8).max
     except AttributeError:
         rgb = np.zeros(xyz.shape)
 
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(xyz)
-    pcd.colors = o3d.utility.Vector3dVector(rgb)
-    return pcd
+    return xyz, rgb.astype(np.float64)
 
 
-def write_las_file(las_path, pcd):
-    """writes las file from an open3d point cloud
+def write_las_file(las_path: Path | str, xyz: np.ndarray, rgb: np.ndarray) -> None:
+    """Write a LAS file from XYZ and RGB numpy arrays.
 
     Args:
-        las_path (string): path to las / laz file
-        pcd (open3d.geometry.PointCloud): input point cloud
+        las_path: output .las / .laz path.
+        xyz: point coordinates, shape (N, 3).
+        rgb: normalised RGB colours in [0, 1], shape (N, 3).
     """
-
-    points = np.asarray(pcd.points)
-    colors = np.asarray(pcd.colors)
-
-    # 1. Create a new header
     header = laspy.LasHeader(point_format=3, version="1.2")
-    # header.add_extra_dim(laspy.ExtraBytesParams(name="random", type=np.int32))
-    header.offsets = np.min(points, axis=0)
+    header.offsets = np.min(xyz, axis=0)
     header.scales = np.array([0.001, 0.001, 0.001])
 
-    # 2. Create a Las
     las = laspy.LasData(header)
+    las.x = xyz[:, 0]
+    las.y = xyz[:, 1]
+    las.z = xyz[:, 2]
 
-    las.x = points[:, 0]
-    las.y = points[:, 1]
-    las.z = points[:, 2]
+    las.red = (rgb[:, 0] * 255).astype(int)
+    las.green = (rgb[:, 1] * 255).astype(int)
+    las.blue = (rgb[:, 2] * 255).astype(int)
 
-    las.red = colors[:, 0] * 255
-    las.red = las.red.astype("int")
-    las.green = colors[:, 1] * 255
-    las.geen = las.green.astype("int")
-    las.blue = colors[:, 2] * 255
-    las.blue = las.blue.astype("int")
-
-    las.write(las_path)
+    las.write(str(las_path))
 
 
 def split_pcd_z():

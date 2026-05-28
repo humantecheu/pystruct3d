@@ -15,8 +15,9 @@ pystruct3d is an open-source Python library supporting scan-to-BIM workflows as 
 - **visualization**: Visualizer class for displaying bounding boxes, points, and point clouds
 - **annotation**: Utilities to transfer point-level annotations from an annotated point cloud to unannotated data
 - **preprocessing**: Point cloud preprocessing including axis alignment and array search utilities
+- **io**: Format-agnostic point cloud reader (`read_point_cloud`) with dedicated readers for LAS/LAZ, E57, and Open3D-compatible formats (PCD, PLY, XYZ, PTS)
 
-pystruct3d leverages [NumPy](https://github.com/numpy/numpy) and [SciPy](https://github.com/scipy/scipy) for computational efficiency, and [Open3D](https://github.com/isl-org/Open3D) for point cloud handling and visualization.
+pystruct3d leverages [NumPy](https://github.com/numpy/numpy) and [SciPy](https://github.com/scipy/scipy) for computational efficiency, and [Open3D](https://github.com/isl-org/Open3D) for geometry, visualization, and point cloud I/O.
 
 ## Installation
 
@@ -33,11 +34,9 @@ The `-e` flag is for development. For use only, `pip install .` is sufficient.
 - Python 3.12+
 - NumPy
 - SciPy
+- Open3D
 - laspy
 - pye57
-
-**Visualization only:**
-- Open3D
 
 ## Bounding box naming convention
 
