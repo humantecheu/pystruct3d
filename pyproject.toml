@@ -27,3 +27,4 @@ indent-width = 4
 
 [tool.ruff.format]
 quote-style = "double"
+preview     = true

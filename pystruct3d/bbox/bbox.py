@@ -510,22 +510,39 @@ class BBox:
     @classmethod
     def from_params(
         cls,
-        center: np.ndarray,
+        position: np.ndarray,
         lwh: tuple[float, float, float] | np.ndarray,
-        yaw: float,
+        yaw: float = 0.0,
+        *,
+        origin: str = "center",
     ) -> BBox:
-        """Construct from detection-style parameters.
+        """Construct from parametric position, dimensions, and yaw.
 
         Args:
-            center: (3,) xyz position of the box centre.
+            position: (3,) xyz coordinates. Interpreted as the box centre when
+                ``origin="center"`` (default), or as the minimum corner
+                (bottom-left-front in the pre-rotation frame) when
+                ``origin="corner"``.
             lwh: (length, width, height) — length is the longer horizontal dim.
-            yaw: rotation around the Z-axis in radians (CCW).
+            yaw: rotation around the Z-axis in radians (CCW). Defaults to 0.0.
+            origin: ``"center"`` or ``"corner"``. Defaults to ``"center"``.
 
         Returns:
             BBox with the described geometry.
+
+        Raises:
+            ValueError: if ``origin`` is not ``"center"`` or ``"corner"``.
         """
         length, w, h = lwh
         hl, hw, hh = length / 2, w / 2, h / 2
+
+        if origin == "center":
+            center = np.asarray(position, dtype=float)
+        elif origin == "corner":
+            center = np.asarray(position, dtype=float) + np.array([hl, hw, hh])
+        else:
+            raise ValueError(f"origin must be 'center' or 'corner', got {origin!r}")
+
         corners = np.array(
             [
                 [-hl, -hw, -hh],
@@ -543,7 +560,7 @@ class BBox:
         xy = corners[:, :2].copy()
         corners[:, 0] = c * xy[:, 0] - s * xy[:, 1]
         corners[:, 1] = s * xy[:, 0] + c * xy[:, 1]
-        corners += np.asarray(center, dtype=float)
+        corners += center
         return cls(corners)
 
     def to_dict(self) -> dict:

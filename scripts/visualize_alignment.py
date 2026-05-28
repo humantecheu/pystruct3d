@@ -9,8 +9,8 @@ import sys
 import numpy as np
 import open3d as o3d
 
+from pystruct3d.io.las import read_las_file
 from pystruct3d.preprocessing.alignment import align_to_axes
-from pystruct3d.utils.las_utils import read_las_file
 from pystruct3d.visualization.visualization import Visualization
 
 COORD_FRAME_SIZE = 5.0

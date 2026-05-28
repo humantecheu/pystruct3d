@@ -1,60 +1,49 @@
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
-from pystruct3d.metrics.generate_example import create_bbox_lists
+from pystruct3d.testing import create_bbox_lists
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
-
-# from pystruct3d.visualization.visualization import Visualization
 
 
 def voxelize_bbox(
     bbox: BBox,
     volume_limits: tuple[np.ndarray, np.ndarray],
     voxel_size: float,
-):
-    """_summary_
+) -> np.ndarray:
+    """Voxelize a bounding box interior and return occupied global voxel indices.
+
+    Generates a dense meshgrid of voxel midpoints within the bbox AABB, filters
+    them with OBB containment, and maps each surviving midpoint to a flat index
+    in the global voxel grid defined by ``volume_limits``.
 
     Args:
-        bbox (BBox): _description_
-        volume_limits (Tuple[np.ndarray, np.ndarray]): _description_
-        voxel_size (float): _description_
+        bbox: bounding box to voxelize.
+        volume_limits: (min_vals, max_vals) of the global voxel grid, shape (3,) each.
+        voxel_size: voxel edge length in metres.
+
+    Returns:
+        Sorted array of unique flat voxel indices occupied by the bbox interior.
     """
     min_vals, max_vals = volume_limits
     volume_dims = np.ceil((max_vals - min_vals) / voxel_size).astype(int)
 
-    x_dim = volume_dims[0]
-    y_dim = volume_dims[1]
-
     bbox_min, bbox_max = voxelization_limits(bbox)
 
-    # Define voxel grid ranges
     x_range = np.arange(bbox_min[0], bbox_max[0], voxel_size) + voxel_size / 2
     y_range = np.arange(bbox_min[1], bbox_max[1], voxel_size) + voxel_size / 2
     z_range = np.arange(bbox_min[2], bbox_max[2], voxel_size) + voxel_size / 2
 
-    # Create a 3D grid of midpoints
     x, y, z = np.meshgrid(x_range, y_range, z_range, indexing="ij")
     midpoints = np.stack((x, y, z), axis=-1).reshape(-1, 3)
 
-    points_in_bbox, _ = bbox.points_in_bbox(midpoints)
-    indices = ((points_in_bbox - min_vals) / voxel_size).astype(int)
+    points_inside, _ = bbox.points_in_bbox(midpoints)
+    indices = ((points_inside - min_vals) / voxel_size).astype(int)
 
-    # fmt: off
-    # TODO: check numpy builtin method for potential speedup
-    # https://numpy.org/doc/stable/reference/generated/numpy.ravel_multi_index.html
-    flattened_indices = (
-        indices[:, 2] * x_dim * y_dim +
-        indices[:, 1] * x_dim +
-        indices[:, 0]
+    flattened = np.ravel_multi_index(
+        (indices[:, 2], indices[:, 1], indices[:, 0]),
+        (volume_dims[2], volume_dims[1], volume_dims[0]),
     )
-    # fmt: on
-
-    # vis = Visualization()
-    # vis.bbox_geometry(bbox)
-    # vis.point_cloud_geometry(points_in_bbox)
-    # vis.visualize()
-
-    return np.unique(flattened_indices)
+    return np.unique(flattened)
 
 
 def volumetric_iou(
@@ -62,21 +51,36 @@ def volumetric_iou(
     predicted_bboxes: list[BBox],
     volume_limits: tuple[np.ndarray, np.ndarray] | None = None,
     voxel_size: float = 0.01,
-):
+) -> tuple[float, int]:
+    """Scene-level volumetric IoU between two sets of bounding boxes.
+
+    Voxelizes every GT box into a single occupancy set and every predicted box
+    into another, then computes IoU on those sets. This is a detection coverage
+    metric at the scene level, not a per-box metric.
+
+    Args:
+        groundtruth_bboxes: ground-truth bounding boxes.
+        predicted_bboxes: predicted bounding boxes.
+        volume_limits: global voxel grid extents. Computed from both lists if None.
+        voxel_size: voxel edge length in metres. Defaults to 0.01.
+
+    Returns:
+        iou: intersection-over-union of the two voxel occupancy sets.
+        num_gt_voxels: number of voxels occupied by the ground-truth set.
+    """
     if volume_limits is None:
         volume_limits = voxelization_limits(groundtruth_bboxes, predicted_bboxes)
 
-    # TODO: Vectorize and benchmark
-    groundtruth_indices = np.array([])
-    for bbox in groundtruth_bboxes:
-        groundtruth_indices = np.union1d(
-            groundtruth_indices, voxelize_bbox(bbox, volume_limits, voxel_size)
-        )
-    predicted_indices = np.array([])
-    for bbox in predicted_bboxes:
-        predicted_indices = np.union1d(
-            predicted_indices, voxelize_bbox(bbox, volume_limits, voxel_size)
-        )
+    groundtruth_indices = np.unique(
+        np.concatenate([
+            voxelize_bbox(b, volume_limits, voxel_size) for b in groundtruth_bboxes
+        ])
+    )
+    predicted_indices = np.unique(
+        np.concatenate([
+            voxelize_bbox(b, volume_limits, voxel_size) for b in predicted_bboxes
+        ])
+    )
 
     len_intersect = len(np.intersect1d(groundtruth_indices, predicted_indices))
     len_union = len(np.union1d(groundtruth_indices, predicted_indices))
@@ -86,24 +90,18 @@ def volumetric_iou(
     return iou, num_gt_voxels
 
 
-def mean_volumetric_iou(classes_iou: list[tuple[float, float]]) -> float:
-    """_summary_
+def mean_volumetric_iou(classes_iou: list[tuple[float, int]]) -> float:
+    """GT-voxel-weighted mean volumetric IoU across classes.
 
     Args:
-        classes_iou (List[Tuple[float, float]]): _description_
+        classes_iou: list of (iou, num_gt_voxels) per class, as returned
+            by :func:`volumetric_iou`.
 
     Returns:
-        float: _description_
+        Mean IoU weighted by the number of GT voxels per class.
     """
-    total_gt_voxels = 0
-    for _, gt_voxels in classes_iou:
-        total_gt_voxels += gt_voxels
-
-    miou = 0
-    for iou, gt_voxels in classes_iou:
-        miou += iou * gt_voxels / total_gt_voxels
-
-    return miou
+    total_gt_voxels = sum(gt_voxels for _, gt_voxels in classes_iou)
+    return sum(iou * gt_voxels / total_gt_voxels for iou, gt_voxels in classes_iou)
 
 
 def main():

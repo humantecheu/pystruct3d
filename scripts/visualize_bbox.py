@@ -7,18 +7,16 @@ from pystruct3d.visualization import visualization
 
 rand_pts = np.random.uniform(-100, 100, size=(100000000, 3))
 
-sample_points = np.array(
-    [
-        [0.0, 0.0, 0.0],
-        [5.0, 0.0, 0.0],
-        [5.0, 1.0, 0.0],
-        [0.0, 1.0, 0.0],
-        [0.0, 0.0, 3.0],
-        [5.0, 0.0, 3.0],
-        [5.0, 1.0, 3.0],
-        [0.0, 1.0, 3.0],
-    ]
-)
+sample_points = np.array([
+    [0.0, 0.0, 0.0],
+    [5.0, 0.0, 0.0],
+    [5.0, 1.0, 0.0],
+    [0.0, 1.0, 0.0],
+    [0.0, 0.0, 3.0],
+    [5.0, 0.0, 3.0],
+    [5.0, 1.0, 3.0],
+    [0.0, 1.0, 3.0],
+])
 
 ref_box = bbox.BBox(sample_points)
 

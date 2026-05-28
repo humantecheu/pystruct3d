@@ -3,7 +3,7 @@ from scipy.optimize import linear_sum_assignment
 from scipy.spatial import KDTree
 
 from pystruct3d.bbox.bbox import BBox
-from pystruct3d.metrics.generate_example import create_bbox_lists
+from pystruct3d.testing import create_bbox_lists
 from pystruct3d.visualization.visualization import Visualization
 
 

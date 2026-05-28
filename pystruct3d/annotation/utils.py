@@ -68,13 +68,11 @@ def main():
     new_labels = transfer_labels(labeled_pcd, labels_arr, unlabeled_pcd)
     print(f"New labels: {np.unique(new_labels)}")
 
-    ascii_pcd = np.hstack(
-        (
-            np.asarray(unlabeled_pcd.points, dtype=np.float32),
-            np.asarray(unlabeled_pcd.colors, dtype=np.float32),
-            new_labels.reshape(-1, 1),
-        )
-    )
+    ascii_pcd = np.hstack((
+        np.asarray(unlabeled_pcd.points, dtype=np.float32),
+        np.asarray(unlabeled_pcd.colors, dtype=np.float32),
+        new_labels.reshape(-1, 1),
+    ))
     np.savetxt(f"{unlabeled_file[:-4]}_transferred_labels.txt", ascii_pcd, fmt="%.8e")
 
 

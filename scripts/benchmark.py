@@ -13,7 +13,7 @@ import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.bbox_iou import mean_bbox_iou
-from pystruct3d.metrics.generate_example import create_bbox_lists
+from pystruct3d.testing import create_bbox_lists
 from pystruct3d.metrics.volumetric_iou import voxelize_bbox
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
 
@@ -26,18 +26,16 @@ VOXEL_SIZE = 0.05
 
 _rng = np.random.default_rng(42)
 
-_WALL_PTS = np.array(
-    [
-        [0.0, 0.0, 0.0],
-        [5.0, 0.0, 0.0],
-        [5.0, 0.2, 0.0],
-        [0.0, 0.2, 0.0],
-        [0.0, 0.0, 3.0],
-        [5.0, 0.0, 3.0],
-        [5.0, 0.2, 3.0],
-        [0.0, 0.2, 3.0],
-    ]
-)
+_WALL_PTS = np.array([
+    [0.0, 0.0, 0.0],
+    [5.0, 0.0, 0.0],
+    [5.0, 0.2, 0.0],
+    [0.0, 0.2, 0.0],
+    [0.0, 0.0, 3.0],
+    [5.0, 0.0, 3.0],
+    [5.0, 0.2, 3.0],
+    [0.0, 0.2, 3.0],
+])
 
 BBOX = BBox(_WALL_PTS.copy())
 
