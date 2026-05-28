@@ -81,13 +81,11 @@ def align_to_axes(
     angle = _dominant_wall_angle(source[:, :2])
 
     c, s = np.cos(-angle), np.sin(-angle)
-    rotation_matrix = np.array(
-        [
-            [c, -s, 0.0],
-            [s, c, 0.0],
-            [0.0, 0.0, 1.0],
-        ]
-    )
+    rotation_matrix = np.array([
+        [c, -s, 0.0],
+        [s, c, 0.0],
+        [0.0, 0.0, 1.0],
+    ])
 
     rotated_points = (rotation_matrix @ points.T).T
     return rotated_points, rotation_matrix

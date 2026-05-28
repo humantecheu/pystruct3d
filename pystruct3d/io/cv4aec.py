@@ -49,34 +49,26 @@ def bbox_from_cv4aec(cv4aec_dict: dict) -> BBox:
         bx_height = cv4aec_dict["height"]
         rotation = cv4aec_dict["rotation"]
 
-        box.corner_points[0] = loc_vec - np.asarray(
-            [
-                0.5 * bx_width,
-                0.5 * bx_depth,
-                0.0,
-            ]
-        )
-        box.corner_points[1] = loc_vec + np.asarray(
-            [
-                0.5 * bx_width,
-                -0.5 * bx_depth,
-                0.0,
-            ]
-        )
-        box.corner_points[2] = loc_vec + np.asarray(
-            [
-                0.5 * bx_width,
-                0.5 * bx_depth,
-                0.0,
-            ]
-        )
-        box.corner_points[3] = loc_vec + np.asarray(
-            [
-                -0.5 * bx_width,
-                0.5 * bx_depth,
-                0.0,
-            ]
-        )
+        box.corner_points[0] = loc_vec - np.asarray([
+            0.5 * bx_width,
+            0.5 * bx_depth,
+            0.0,
+        ])
+        box.corner_points[1] = loc_vec + np.asarray([
+            0.5 * bx_width,
+            -0.5 * bx_depth,
+            0.0,
+        ])
+        box.corner_points[2] = loc_vec + np.asarray([
+            0.5 * bx_width,
+            0.5 * bx_depth,
+            0.0,
+        ])
+        box.corner_points[3] = loc_vec + np.asarray([
+            -0.5 * bx_width,
+            0.5 * bx_depth,
+            0.0,
+        ])
         box.corner_points[4] = box.corner_points[0].copy()
         box.corner_points[5] = box.corner_points[1].copy()
         box.corner_points[6] = box.corner_points[2].copy()

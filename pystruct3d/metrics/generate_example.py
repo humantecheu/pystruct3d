@@ -22,18 +22,16 @@ def create_bounding_box(
         np.ndarray: 8x3 array of bounding box corners
     """
     x, y, z = bottom_corner
-    return np.array(
-        [
-            [x, y, z],
-            [x + length, y, z],
-            [x + length, y + width, z],
-            [x, y + width, z],
-            [x, y, z + height],
-            [x + length, y, z + height],
-            [x + length, y + width, z + height],
-            [x, y + width, z + height],
-        ]
-    )
+    return np.array([
+        [x, y, z],
+        [x + length, y, z],
+        [x + length, y + width, z],
+        [x, y + width, z],
+        [x, y, z + height],
+        [x + length, y, z + height],
+        [x + length, y + width, z + height],
+        [x, y + width, z + height],
+    ])
 
 
 def generate_bounding_boxes(
