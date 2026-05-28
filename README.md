@@ -63,6 +63,16 @@ The length is always the longer horizontal dimension, width is the smaller horiz
 }
 ```
 
+## History
+
+**2026-05-28 — history rewrite for author attribution**
+
+Two early commits were authored under an incorrect name and email address. The repository history was rewritten on this date to correct the attribution. If you cloned this repository before 2026-05-28, your local clone will have diverged history. Re-clone to get the corrected history:
+
+```bash
+git clone https://github.com/humantecheu/pystruct3d.git
+```
+
 ## Acknowledgement
 
 This research was funded by the European Union as part of the projects: HumanTech (Grant Agreement 101058236) and ShieldBOT (Grant Agreement 101235093).
