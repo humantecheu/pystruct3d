@@ -7,22 +7,18 @@ Usage:
 import sys
 
 import numpy as np
-import open3d as o3d
 
 from pystruct3d.io.las import read_las_file
 from pystruct3d.preprocessing.alignment import align_to_axes
-from pystruct3d.visualization.visualization import Visualization
+from pystruct3d.visualization import Visualizer
 
 COORD_FRAME_SIZE = 5.0
 
 
 def show(points: np.ndarray, colors: np.ndarray, title: str) -> None:
-    v = Visualization()
-    v.point_cloud_geometry(points, colors=colors)
-    v.visu_list.append(
-        o3d.geometry.TriangleMesh.create_coordinate_frame(size=COORD_FRAME_SIZE)
-    )
-    v.visualize(window_name=title)
+    Visualizer().add_points(points, colors=colors).add_coordinate_frame(
+        size=COORD_FRAME_SIZE
+    ).show(window_name=title)
 
 
 def main(laz_path: str) -> None:

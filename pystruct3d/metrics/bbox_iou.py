@@ -4,7 +4,7 @@ from scipy.spatial import KDTree
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.testing import create_bbox_lists
-from pystruct3d.visualization.visualization import Visualization
+from pystruct3d.visualization import Visualizer
 
 
 def line_intersection_2d(line_1: np.ndarray, line_2: np.ndarray) -> np.ndarray | None:
@@ -200,14 +200,9 @@ def mean_bbox_iou(
 
 def main() -> None:
     gt_boxes, pd_boxes = create_bbox_lists()
-    visualizer = Visualization()
-    for box in gt_boxes:
-        visualizer.bbox_geometry(box, [1, 0, 0])
-    for box in pd_boxes:
-        visualizer.bbox_geometry(box, [0, 0, 1])
-
-    visualizer.visualize()
-
+    Visualizer().add_bbox(gt_boxes, color=[1, 0, 0]).add_bbox(
+        pd_boxes, color=[0, 0, 1]
+    ).show()
     print(mean_bbox_iou(gt_boxes, pd_boxes))
 
 

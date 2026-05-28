@@ -4,49 +4,37 @@ import open3d as o3d
 
 
 def read_las_file(
-    las_path: str, visualize: int = 0, color_division: float = 65025
+    las_path: str,
+    color_division: float = 65025,
 ) -> o3d.geometry.PointCloud:
-    """Read las file
+    """Read a LAS / LAZ file into an Open3D point cloud.
 
     Args:
-        las_path (string): path to las file
-        visualize (int): control visualization behavious
-        color_division (float): division of color values, 255 or 65025, defaults to 65025
+        las_path: path to a .las or .laz file.
+        color_division: divisor for RGB values (255 for 8-bit, 65025 for 16-bit).
+            Defaults to 65025.
 
     Returns:
-        o3d.geometry.PointCloud: point cloud with points and colors
+        Open3D PointCloud with XYZ coordinates and normalised RGB colours.
     """
     assert las_path.endswith(".las") or las_path.endswith(".laz"), (
         "Check the point cloud input type."
     )
 
-    # Load the LAS file
-    print(f"Load las / laz point cloud: {las_path}")
     las_file = laspy.read(las_path)
 
-    # Extract the XYZ coordinates and RGB color data
     xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()
     try:
         rgb = (
             np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()
             / color_division
-        )  # 65025
+        )
     except AttributeError:
         rgb = np.zeros(xyz.shape)
 
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz)
     pcd.colors = o3d.utility.Vector3dVector(rgb)
-
-    if visualize:
-        with o3d.utility.VerbosityContextManager(o3d.utility.VerbosityLevel.Debug):
-            o3d.visualization.draw_geometries(
-                [pcd],
-                window_name="Input point cloud",
-                width=2560,
-                height=1440,
-            )
-
     return pcd
 
 

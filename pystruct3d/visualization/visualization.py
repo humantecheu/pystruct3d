@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Sequence
 
 import numpy as np
@@ -5,117 +7,229 @@ import open3d as o3d
 
 from pystruct3d.bbox.bbox import BBox
 
+_Geometry = o3d.geometry.Geometry3D
 
-class Visualization:
-    """Class for basic Visualization of one or multiple point clouds or bounding boxes"""
+
+class Visualizer:
+    """Fluent builder for Open3D visualizations.
+
+    Each ``add_*`` method returns ``self`` so calls can be chained::
+
+        Visualizer()
+            .add_bbox(gt_boxes, color=[1, 0, 0], name="gt")
+            .add_points(cloud)
+            .add_coordinate_frame()
+            .show()
+    """
 
     def __init__(self) -> None:
-        self.visu_list = []
+        self._geometries: list[tuple[str | None, _Geometry]] = []
 
-    def o3d_point_cloud(self, point_cloud: o3d.geometry.PointCloud):
-        self.visu_list.append(point_cloud)
+    # ── add methods ───────────────────────────────────────────────────────────
 
-    def point_cloud_geometry(
-        self, points: np.ndarray, unique_color=None, colors=np.empty((0,))
-    ) -> None:
-        """create an open3d point cloud from points
+    def add_bbox(
+        self,
+        bbox: BBox | Sequence[BBox],
+        color: list[float] = [0, 1, 0],
+        *,
+        name: str | None = None,
+    ) -> Visualizer:
+        """Add one or more bounding boxes as wire-frame line sets.
 
         Args:
-            points (np.ndarray): points, shape (n, 3)
+            bbox: a single BBox or a sequence of BBox objects.
+            color: RGB color in [0, 1]. Defaults to green.
+            name: optional tag for later removal with :meth:`remove`.
+
+        Returns:
+            self
         """
-        # initialize the point cloud with the points
+        lines = [
+            [0, 1],
+            [1, 2],
+            [2, 3],
+            [3, 0],
+            [4, 5],
+            [5, 6],
+            [6, 7],
+            [7, 4],
+            [0, 4],
+            [1, 5],
+            [2, 6],
+            [3, 7],
+        ]
+        line_colors = [color for _ in lines]
+
+        boxes = [bbox] if isinstance(bbox, BBox) else list(bbox)
+        for box in boxes:
+            ls = o3d.geometry.LineSet()
+            ls.points = o3d.utility.Vector3dVector(box.as_np_array())
+            ls.lines = o3d.utility.Vector2iVector(lines)
+            ls.colors = o3d.utility.Vector3dVector(line_colors)
+            self._geometries.append((name, ls))
+        return self
+
+    def add_points(
+        self,
+        points: np.ndarray,
+        color: list[float] | None = None,
+        colors: np.ndarray | None = None,
+        *,
+        name: str | None = None,
+    ) -> Visualizer:
+        """Add a point cloud from a numpy array.
+
+        Args:
+            points: array of shape (n, 3).
+            color: uniform RGB color in [0, 1]. Ignored if ``colors`` is provided.
+            colors: per-point RGB array of shape (n, 3).
+            name: optional tag for later removal with :meth:`remove`.
+
+        Returns:
+            self
+        """
         pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(points))
-        if np.any(colors):
+        if colors is not None and len(colors):
             pcd.colors = o3d.utility.Vector3dVector(colors)
-        if unique_color is not None:
-            pcd.paint_uniform_color(unique_color)
-        # append to Visualization list
-        self.visu_list.append(pcd)
+        elif color is not None:
+            pcd.paint_uniform_color(color)
+        self._geometries.append((name, pcd))
+        return self
 
-    def bbox_geometry(self, bboxes: BBox | Sequence[BBox], color=[0, 1, 0]):
-        """Creates an open3d line set from a bounding box. Points should be ordered!
-
-        Args:
-            bounding_box (bbox): bbox object, or list of BBox objects
-            color (list, optional): RGB color, list in range of 0, 1. Defaults to [0, 1, 0].
-        """
-
-        def visualize_bbox(bx: BBox) -> None:
-            corner_points_array = bx.as_np_array()
-            # Lines are represented as pairs of indices referencing the list of points (i.e., the corners of the box)
-            # fmt:off
-            lines = [
-                [0, 1], [1, 2], [2, 3], [3, 0],  # Bottom edges
-                [4, 5], [5, 6], [6, 7], [7, 4],  # Top edges
-                [0, 4], [1, 5], [2, 6], [3, 7]   # Side edges
-                ]
-            # fmt:on
-            colors = [color for _ in range(len(lines))]
-            # initialize line set with the corner points
-            bounding_box = o3d.geometry.LineSet()
-            bounding_box.points = o3d.utility.Vector3dVector(
-                corner_points_array
-            )  # Flatten the points
-            bounding_box.lines = o3d.utility.Vector2iVector(lines)
-            bounding_box.colors = o3d.utility.Vector3dVector(colors)
-            # append to Visualization list
-            self.visu_list.append(bounding_box)
-
-        if isinstance(bboxes, BBox):
-            bboxes = [bboxes]
-
-        for box in bboxes:
-            visualize_bbox(box)
-
-    def points_geometry(self, points, color=[1, 0.706, 0]):
-        """visualize few points e.g., endpoints
+    def add_point_cloud(
+        self,
+        pcd: o3d.geometry.PointCloud,
+        *,
+        name: str | None = None,
+    ) -> Visualizer:
+        """Add a pre-built Open3D PointCloud.
 
         Args:
-            points (np.ndarray): points, shape (n, 3)
-        """
+            pcd: Open3D point cloud object.
+            name: optional tag for later removal with :meth:`remove`.
 
+        Returns:
+            self
+        """
+        self._geometries.append((name, pcd))
+        return self
+
+    def add_markers(
+        self,
+        points: np.ndarray,
+        color: list[float] = [1, 0.706, 0],
+        radius: float = 0.1,
+        *,
+        name: str | None = None,
+    ) -> Visualizer:
+        """Add individual points rendered as small spheres.
+
+        Args:
+            points: array of shape (n, 3).
+            color: uniform RGB color in [0, 1]. Defaults to orange.
+            radius: sphere radius in metres. Defaults to 0.1.
+            name: optional tag for later removal with :meth:`remove`.
+
+        Returns:
+            self
+        """
         for pt in points:
-            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.1)
+            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius)
             sphere.translate(pt)
             sphere.paint_uniform_color(color)
-            self.visu_list.append(sphere)
+            self._geometries.append((name, sphere))
+        return self
 
-    def clear(self):
-        """Clear visualization list"""
-        self.visu_list = []
-
-    def visualize(
-        self, window_name="pystruct3D Visualizer", w_width=2560, w_height=1440
-    ):
-        """visualize list of geometries"""
-        if self.visu_list:
-            o3d.visualization.draw_geometries(
-                self.visu_list,
-                window_name=window_name,
-                width=w_width,
-                height=w_height,
-            )
-        else:
-            print("Empty visulization list, did you create geometries?")
-
-    def visualize_with_animation(
+    def add_coordinate_frame(
         self,
-        window_name="pystruct3D Visualizer",
-        w_width=2560,
-        w_height=1440,
-        animation_trajectory="",
-    ):
-        """visualize list of geometries"""
-        # open3d coordinate frame
-        coord_frame = o3d.geometry.TriangleMesh.create_coordinate_frame()
-        self.visu_list.append(coord_frame)
-        if self.visu_list:
-            o3d.visualization.draw_geometries_with_custom_animation(
-                self.visu_list,
-                window_name=window_name,
-                width=w_width,
-                height=w_height,
-                optional_view_trajectory_json_file=animation_trajectory,
-            )
-        else:
-            print("Empty visulization list, did you create geometries?")
+        size: float = 1.0,
+        origin: list[float] = [0.0, 0.0, 0.0],
+        *,
+        name: str | None = None,
+    ) -> Visualizer:
+        """Add an RGB coordinate frame axes indicator.
+
+        Args:
+            size: axis length in metres. Defaults to 1.0.
+            origin: position of the frame origin. Defaults to [0, 0, 0].
+            name: optional tag for later removal with :meth:`remove`.
+
+        Returns:
+            self
+        """
+        frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
+            size=size, origin=origin
+        )
+        self._geometries.append((name, frame))
+        return self
+
+    # ── management ────────────────────────────────────────────────────────────
+
+    def remove(self, name: str) -> Visualizer:
+        """Remove all geometries added with the given name.
+
+        Args:
+            name: tag passed to an earlier ``add_*`` call.
+
+        Returns:
+            self
+        """
+        self._geometries = [(n, g) for n, g in self._geometries if n != name]
+        return self
+
+    def clear(self) -> Visualizer:
+        """Remove all geometries.
+
+        Returns:
+            self
+        """
+        self._geometries = []
+        return self
+
+    # ── display ───────────────────────────────────────────────────────────────
+
+    def show(
+        self,
+        window_name: str = "pystruct3d",
+        width: int = 2560,
+        height: int = 1440,
+    ) -> None:
+        """Open an interactive Open3D viewer with all added geometries.
+
+        Args:
+            window_name: title of the viewer window.
+            width: window width in pixels. Defaults to 2560.
+            height: window height in pixels. Defaults to 1440.
+        """
+        geoms = [g for _, g in self._geometries]
+        if not geoms:
+            return
+        o3d.visualization.draw_geometries(  # type: ignore
+            geoms, window_name=window_name, width=width, height=height
+        )
+
+    def show_with_animation(
+        self,
+        trajectory: str = "",
+        window_name: str = "pystruct3d",
+        width: int = 2560,
+        height: int = 1440,
+    ) -> None:
+        """Open an interactive viewer with a custom camera animation trajectory.
+
+        Args:
+            trajectory: path to an Open3D view-trajectory JSON file.
+            window_name: title of the viewer window.
+            width: window width in pixels. Defaults to 2560.
+            height: window height in pixels. Defaults to 1440.
+        """
+        geoms = [g for _, g in self._geometries]
+        if not geoms:
+            return
+        o3d.visualization.draw_geometries_with_custom_animation(  # type: ignore
+            geoms,
+            window_name=window_name,
+            width=width,
+            height=height,
+            optional_view_trajectory_json_file=trajectory,
+        )
