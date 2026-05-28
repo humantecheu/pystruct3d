@@ -16,9 +16,7 @@ def read_e57_file(e57_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
     if isinstance(e57_path, str):
         e57_path = Path(e57_path)
 
-    assert e57_path.suffix == ".e57", (
-        f"File format '{e57_path.suffix}' must be '.e57'."
-    )
+    assert e57_path.suffix == ".e57", f"File format '{e57_path.suffix}' must be '.e57'."
 
     e57 = pye57.E57(str(e57_path))
     xyz_parts, rgb_parts = [], []
