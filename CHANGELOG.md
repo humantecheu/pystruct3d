@@ -3,6 +3,12 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0] - 2026-05-29
+
+### Added
+- `preprocessing.voxel`: `downsample` collapses each voxel cell to its centroid and returns a direct O(n) point-to-voxel index mapping (no KDTree)
+- `preprocessing.voxel`: `density_filter` removes points whose voxel has fewer than `min_points` occupants
+
 ## [0.8.0] - 2026-05-28
 
 ### Added
