@@ -3,6 +3,13 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] - 2026-06-01
+
+### Added
+- `preprocessing.pca`: `simple_pca` — numpy eigendecomposition PCA returning mean, eigenvalues, and eigenvectors sorted by descending variance
+- `preprocessing.pca`: `rotate_by_pca` — rotate a point cloud so its two largest principal axes align with XY
+- `preprocessing.crop`: `crop_roi` — crop a point cloud to its populated XY region via a 2D density histogram
+
 ## [0.10.0] - 2026-06-01
 
 ### Added
