@@ -15,7 +15,17 @@ authors = [
     { name = "Fabian Kaufmann", email = "fabian.kaufmann@rptu.de" },
 ]
 
-dependencies = ["laspy[lazrs,laszip]", "numpy", "open3d", "pye57", "scipy"]
+dependencies = [
+    "laspy[lazrs,laszip]",
+    "matplotlib",
+    "numpy",
+    "open3d",
+    "pye57",
+    "scipy",
+]
+
+[dependency-groups]
+dev = ["pytest>=9.0.3"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

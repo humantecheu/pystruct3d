@@ -1,201 +1,251 @@
+# IoU core (iou_batch, match_iou_stats, and private helpers) ported from
+# github.com/cv4aec/3d-matching-eval (https://github.com/cv4aec/3d-matching-eval).
+# Changes vs original:
+#   - Cost matrix uses proper L2 distance; original accidentally used only the
+#     x-component due to a `[0]` indexing bug in calculate_cost_matrix.
+#   - numba, logging, and config dependencies removed; thresholds are parameters.
+#   - RigidRegistration (a verbatim pycpd copy) is not ported; add `pycpd` as a
+#     dependency and use pycpd.RigidRegistration directly if CPD alignment is needed.
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from scipy.spatial import KDTree
+from scipy.spatial import ConvexHull
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.testing import create_bbox_lists
 from pystruct3d.visualization import Visualizer
 
 
-def line_intersection_2d(line_1: np.ndarray, line_2: np.ndarray) -> np.ndarray | None:
-    # Each line is defined by two points: (x1, y1, z1) and (x2, y2, z2)
-    # Extract the x and y coordinates of the points
-    x1, y1, _ = line_1[0]
-    x2, y2, _ = line_1[1]
-    x3, y3, _ = line_2[0]
-    x4, y4, _ = line_2[1]
-
-    # Calculate the coefficients for the lines
-    # Line1: (a1 * x) + (b1 * y) = c1
-    a1 = y2 - y1
-    b1 = x1 - x2
-    c1 = a1 * x1 + b1 * y1
-
-    # Line2: (a2 * x) + (b2 * y) = c2
-    a2 = y4 - y3
-    b2 = x3 - x4
-    c2 = a2 * x3 + b2 * y3
-
-    # Calculate the determinant
-    det = a1 * b2 - a2 * b1
-
-    if det == 0:
-        # The lines are parallel or coincident
-        return None
-    else:
-        # Calculate the intersection point
-        x = (b2 * c1 - b1 * c2) / det
-        y = (a1 * c2 - a2 * c1) / det
-        return np.array([x, y])
+# ---------------------------------------------------------------------------
+# Private helpers
+# ---------------------------------------------------------------------------
 
 
-def on_segment(line: np.ndarray, point: np.ndarray) -> bool:
-    """Check if point c is between points a and b."""
-    a = line[0, :2]
-    b = line[1, :2]
-    crossproduct = (point[1] - a[1]) * (b[0] - a[0]) - (point[0] - a[0]) * (b[1] - a[1])
-    if abs(crossproduct) > 1e-10:  # Allow a small error margin
-        return False
+def _polygon_clip(subject: list, clip: list) -> list | None:
+    """Sutherland-Hodgman polygon clipping.
 
-    dotproduct = (point[0] - a[0]) * (b[0] - a[0]) + (point[1] - a[1]) * (b[1] - a[1])
-    if dotproduct < 0:
-        return False
+    Ref: https://rosettacode.org/wiki/Sutherland-Hodgman_polygon_clipping#Python
 
-    squaredlengthba = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2
-    if dotproduct > squaredlengthba:
-        return False
+    Args:
+        subject: list of [x, y] points — any polygon.
+        clip: list of [x, y] points — must be convex and counter-clockwise.
 
-    return True
+    Returns:
+        Clipped polygon vertex list, or None if the intersection is empty.
+    """
 
+    def _inside(p: list) -> bool:
+        return (cp2[0] - cp1[0]) * (p[1] - cp1[1]) >= (cp2[1] - cp1[1]) * (
+            p[0] - cp1[0]
+        )
 
-def bbox_2d_intersection(bbox_1: BBox, bbox_2: BBox):
-    bbox_1_2d = bbox_1.corner_points[:4]
-    bbox_2_2d = bbox_2.corner_points[:4]
+    def _intersect() -> list:
+        dc = [cp1[0] - cp2[0], cp1[1] - cp2[1]]
+        dp = [s[0] - e[0], s[1] - e[1]]
+        n1 = cp1[0] * cp2[1] - cp1[1] * cp2[0]
+        n2 = s[0] * e[1] - s[1] * e[0]
+        n3 = 1.0 / (dc[0] * dp[1] - dc[1] * dp[0])
+        return [(n1 * dp[0] - n2 * dc[0]) * n3, (n1 * dp[1] - n2 * dc[1]) * n3]
 
-    vertices_2d = []
-
-    for i in range(bbox_1_2d.shape[0]):
-        for j in range(bbox_2_2d.shape[0]):
-            line_1 = np.array([bbox_1_2d[i], bbox_1_2d[i - 1]])
-            line_2 = np.array([bbox_2_2d[j], bbox_2_2d[j - 1]])
-            intersection = line_intersection_2d(line_1, line_2)
-            # if there is an intersection check that it belongs to the segments
-            if (
-                intersection is not None
-                and on_segment(line_1, intersection)
-                and on_segment(line_2, intersection)
-            ):
-                vertices_2d.append(intersection)
-
-            # if there is no intersection check if they are colinear
-            elif on_segment(line_1, bbox_2_2d[j]):
-                vertices_2d.append(bbox_2_2d[j, :2])
-
-            elif on_segment(line_2, bbox_1_2d[i]):
-                vertices_2d.append(bbox_1_2d[i, :2])
-
-    if not vertices_2d:
-        vertices_2d = np.zeros((0, 2))
-    else:
-        vertices_2d = np.array(vertices_2d)
-
-    points, _ = bbox_1.points_in_bbox_2d(bbox_2_2d)
-    if points.any():
-        vertices_2d = np.vstack((vertices_2d, points[:, :2]))
-    points, _ = bbox_2.points_in_bbox_2d(bbox_1_2d)
-    if points.any():
-        vertices_2d = np.vstack((vertices_2d, points[:, :2]))
-
-    # Only return unique 2D points
-    vertices_2d = np.unique(vertices_2d.round(decimals=4), axis=0)
-    return vertices_2d
+    output = subject
+    cp1 = clip[-1]
+    for cp2 in clip:
+        inp, output = output, []
+        s = inp[-1]
+        for e in inp:
+            if _inside(e):
+                if not _inside(s):
+                    output.append(_intersect())
+                output.append(e)
+            elif _inside(s):
+                output.append(_intersect())
+            s = e
+        cp1 = cp2
+        if not output:
+            return None
+    return output
 
 
-def bbox_z_intersection(bbox_1: BBox, bbox_2: BBox):
-    min_1 = bbox_1.corner_points[0, 2]
-    max_1 = bbox_1.corner_points[4, 2]
-    min_2 = bbox_2.corner_points[0, 2]
-    max_2 = bbox_2.corner_points[4, 2]
-
-    # Check if there's an overlap
-    if max(min_1, min_2) <= min(max_1, max_2):
-        return np.array([max(min_1, min_2), min(max_1, max_2)])
-    else:
-        return None  # No intersection
+def _poly_area(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Shoelace polygon area, broadcast over a leading batch dimension."""
+    return 0.5 * np.abs(
+        np.sum(x * np.roll(y, 1, axis=-1), axis=-1)
+        - np.sum(y * np.roll(x, 1, axis=-1), axis=-1)
+    )
 
 
-def shoelace_2d_area(vertices: np.ndarray):
-    x = vertices[:, 0]
-    y = vertices[:, 1]
-    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+def _to_ccw(faces: np.ndarray) -> np.ndarray:
+    """Reverse any clockwise face polygon in an (n, k, 2) array."""
+    x, y = faces[..., 0], faces[..., 1]
+    cw = (
+        np.sum(x * np.roll(y, 1, axis=-1), axis=-1)
+        - np.sum(y * np.roll(x, 1, axis=-1), axis=-1)
+        > 0
+    )
+    faces[cw] = faces[cw][:, ::-1]
+    return faces
 
 
-def bbox_intersection_volume(intersection_2d: np.ndarray, intersection_z: np.ndarray):
-    def ccw_sort(vertices: np.ndarray):
-        centroid = np.mean(vertices, axis=0)
-        sorted_vertices = vertices[
-            np.argsort(
-                np.arctan2(
-                    vertices[:, 1] - centroid[1],
-                    vertices[:, 0] - centroid[0],
-                )
-            ),
-            :,
-        ]
-        return sorted_vertices
+def _pairwise_intersection_2d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
+    """Pairwise 2D intersection areas via Sutherland-Hodgman + ConvexHull.
 
-    if intersection_2d.shape[0] < 3:
-        # If less than 3 vertices no area exists
-        return 0
+    Args:
+        p1: (n, k, 2) face polygon array (counter-clockwise).
+        p2: (m, k, 2) face polygon array (counter-clockwise).
 
-    area_2d = shoelace_2d_area(ccw_sort(intersection_2d))
-    z_range = np.abs(intersection_z[1] - intersection_z[0])
-    return area_2d * z_range
+    Returns:
+        (n, m) array of intersection areas.
+    """
+    result = np.zeros((len(p1), len(p2)))
+    for i in range(len(p1)):
+        for j in range(len(p2)):
+            try:
+                inter = _polygon_clip(p1[i].tolist(), p2[j].tolist())
+            except ZeroDivisionError:
+                # Degenerate case: near-parallel edges produce a zero denominator.
+                # Treat intersection area as 0 (conservative).
+                continue
+            if inter is not None:
+                try:
+                    result[i, j] = ConvexHull(inter, qhull_options="QJ Pp").volume
+                except Exception:
+                    pass
+    return result
 
 
-def bbox_iou(bbox_1: BBox, bbox_2: BBox):
-    intersection_z = bbox_z_intersection(bbox_1, bbox_2)
-    intersection_volume = 0
-    union_volume = 1
-    if intersection_z is not None:
-        intersection_2d = bbox_2d_intersection(bbox_1, bbox_2)
-        intersection_volume = bbox_intersection_volume(intersection_2d, intersection_z)
-        union_volume = bbox_1.volume() + bbox_2.volume() - intersection_volume
+# ---------------------------------------------------------------------------
+# Array-level IoU (core)
+# ---------------------------------------------------------------------------
 
-    return intersection_volume / union_volume
+
+def iou_batch(gt_corners: np.ndarray, pred_corners: np.ndarray) -> np.ndarray:
+    """Batch 3D IoU between two sets of oriented bounding boxes.
+
+    Corner ordering (same as ``pystruct3d.bbox.BBox.corner_points`` after
+    ``order_points``):
+
+    - corners[0:4]: bottom face (lower z), counter-clockwise in XY
+    - corners[4:8]: top face  (upper z), counter-clockwise in XY
+
+    CCW winding is enforced internally, so any consistent ordering works.
+
+    Args:
+        gt_corners: (n, 8, 3) ground-truth box corners.
+        pred_corners: (m, 8, 3) predicted box corners.
+
+    Returns:
+        (n, m) float32 IoU matrix.
+    """
+    gt = gt_corners.astype(np.float64)
+    pred = pred_corners.astype(np.float64)
+
+    shift = min(float(gt.min()), float(pred.min()), 0.0)
+    gt -= shift
+    pred -= shift
+
+    gface = _to_ccw(gt[:, :4, :2].copy())
+    pface = _to_ccw(pred[:, :4, :2].copy())
+
+    inter_area = _pairwise_intersection_2d(gface, pface)
+
+    nz = np.argwhere(inter_area > 0)
+    iou_3d = np.zeros((len(gt), len(pred)), dtype=np.float32)
+    if len(nz) == 0:
+        return iou_3d
+
+    rows, cols = nz[:, 0], nz[:, 1]
+    z_gt = gt[rows]
+    z_pred = pred[cols]
+
+    z_overlap = np.maximum(
+        0.0,
+        np.minimum(z_gt[:, 4, 2], z_pred[:, 4, 2])
+        - np.maximum(z_gt[:, 0, 2], z_pred[:, 0, 2]),
+    )
+
+    inter_vol = inter_area[rows, cols] * z_overlap
+    vol_gt = np.array([ConvexHull(pts, qhull_options="QJ Pp").volume for pts in z_gt])
+    vol_pred = np.array([
+        ConvexHull(pts, qhull_options="QJ Pp").volume for pts in z_pred
+    ])
+
+    union = vol_gt + vol_pred - inter_vol
+    iou_3d[rows, cols] = np.where(union > 0, inter_vol / union, 0.0).astype(np.float32)
+    np.clip(iou_3d, 0.0, 1.0, out=iou_3d)
+    return iou_3d
+
+
+def match_iou_stats(
+    gt_corners: np.ndarray,
+    pred_corners: np.ndarray,
+) -> dict[str, float]:
+    """IoU statistics for a set of structures via optimal IoU assignment.
+
+    Builds the (n, m) IoU matrix with :func:`iou_batch`, solves the optimal
+    assignment (LAP, maximising IoU), pads unmatched GT boxes with IoU = 0,
+    and returns summary statistics.
+
+    Args:
+        gt_corners: (n, 8, 3) ground-truth box corners.
+        pred_corners: (m, 8, 3) predicted box corners.
+
+    Returns:
+        Dict with keys ``"min"``, ``"max"``, ``"mean"``, ``"median"``, ``"std"``.
+    """
+    iou_matrix = iou_batch(gt_corners, pred_corners)
+    rows, cols = linear_sum_assignment(iou_matrix, maximize=True)
+    matched = iou_matrix[rows, cols].tolist()
+
+    n_unmatched = len(gt_corners) - len(rows)
+    if n_unmatched > 0:
+        matched.extend([0.0] * n_unmatched)
+
+    arr = np.asarray(matched, dtype=np.float32)
+    return {
+        "min": float(arr.min()),
+        "max": float(arr.max()),
+        "mean": float(arr.mean()),
+        "median": float(np.median(arr)),
+        "std": float(arr.std()),
+    }
+
+
+# ---------------------------------------------------------------------------
+# BBox-object API (delegates to array core above)
+# ---------------------------------------------------------------------------
+
+
+def bbox_iou(bbox_1: BBox, bbox_2: BBox) -> float:
+    """3D IoU between two bounding boxes.
+
+    Args:
+        bbox_1: first bounding box.
+        bbox_2: second bounding box.
+
+    Returns:
+        IoU in [0, 1].
+    """
+    gt = bbox_1.corner_points[np.newaxis]
+    pd = bbox_2.corner_points[np.newaxis]
+    return float(iou_batch(gt, pd)[0, 0])
 
 
 def mean_bbox_iou(
     groundtruth_bbox_list: list[BBox],
     predicted_bbox_list: list[BBox],
 ) -> float:
-    """Compute mean IoU between two lists of bounding boxes via optimal assignment.
-
-    Uses a KD-tree on predicted box centroids to skip pairs whose bounding spheres
-    cannot overlap, then solves the assignment problem with scipy's LAP solver.
+    """Mean IoU between two lists of bounding boxes via optimal assignment.
 
     Args:
-        groundtruth_bbox_list: Ground-truth bounding boxes.
-        predicted_bbox_list: Predicted bounding boxes.
+        groundtruth_bbox_list: ground-truth bounding boxes.
+        predicted_bbox_list: predicted bounding boxes.
 
     Returns:
         Mean IoU of the optimal assignment.
     """
-    dim = max(len(groundtruth_bbox_list), len(predicted_bbox_list))
-    iou_matrix = np.zeros((dim, dim))
-
-    def _centroid(box: BBox) -> np.ndarray:
-        return np.mean(box.corner_points, axis=0)
-
-    def _half_diag(box: BBox) -> float:
-        cp = box.corner_points
-        return float(np.linalg.norm(cp[6] - cp[0])) / 2.0
-
-    pd_centroids = np.array([_centroid(b) for b in predicted_bbox_list])
-    pd_half_diags = np.array([_half_diag(b) for b in predicted_bbox_list])
-    max_pd_half_diag = float(pd_half_diags.max()) if len(pd_half_diags) else 0.0
-
-    kd = KDTree(pd_centroids)
-
-    for i, gt_bbox in enumerate(groundtruth_bbox_list):
-        gt_center = _centroid(gt_bbox)
-        radius = _half_diag(gt_bbox) + max_pd_half_diag
-        candidate_indices = kd.query_ball_point(gt_center, radius)
-        for j in candidate_indices:
-            iou_matrix[i, j] = bbox_iou(gt_bbox, predicted_bbox_list[j])
-
-    row_ind, col_ind = linear_sum_assignment(-iou_matrix)
-    return float(np.mean(iou_matrix[row_ind, col_ind]))
+    gt_c = np.stack([b.corner_points for b in groundtruth_bbox_list])
+    pd_c = np.stack([b.corner_points for b in predicted_bbox_list])
+    return match_iou_stats(gt_c, pd_c)["mean"]
 
 
 def main() -> None:

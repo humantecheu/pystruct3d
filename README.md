@@ -35,6 +35,7 @@ The `-e` flag is for development. For use only, `pip install .` is sufficient.
 - NumPy
 - SciPy
 - Open3D
+- Matplotlib
 - laspy
 - pye57
 
@@ -50,6 +51,7 @@ The length is always the longer horizontal dimension, width is the smaller horiz
 
 - **Paper**: [BIMStruct3D: A Fully Automated Hybrid Learning Scan-to-BIM Pipeline with Integrated Topology Refinement](https://arxiv.org/abs/2604.24311)
 - **Dataset**: [DeKH — German Hospital Dataset](https://huggingface.co/datasets/RPTU-FGMB/DeKH) — annotated point clouds and ground-truth IFC BIM models used in the paper
+- **CV4AEC evaluation**: [3d-matching-eval](https://github.com/cv4aec/3d-matching-eval) — the reference evaluation protocol for the CV4AEC benchmark; `pystruct3d.metrics.bbox_iou` and `pystruct3d.metrics.point_metric` are a clean port of this evaluator
 
 ## Citing this Work
 

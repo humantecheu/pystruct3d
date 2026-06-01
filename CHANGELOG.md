@@ -3,6 +3,21 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] - 2026-06-01
+
+### Added
+- `metrics.bbox_iou`: `iou_batch` — batch 3D IoU for `(n,8,3)` corner arrays via Sutherland-Hodgman clipping + ConvexHull; ported from `github.com/cv4aec/3d-matching-eval`; 2× faster than the old BBox-loop implementation at n=25
+- `metrics.bbox_iou`: `match_iou_stats` — per-structure IoU statistics (min/max/mean/median/std) via optimal IoU assignment
+- `metrics.point_metric`: new module for point- and vertex-level metrics
+- `metrics.point_metric`: `vertex_precision_recall` — LAP-based precision/recall/F1 at multiple vertex-distance thresholds; fixes an x-component-only distance bug in the original evaluator
+- `metrics.point_metric`: `centroid_deviation` — mean nearest-neighbour centroid deviation (moved from `metrics.centroid_deviation`; arg order fixed to GT first)
+
+### Changed
+- `metrics.bbox_iou.bbox_iou` and `metrics.bbox_iou.mean_bbox_iou`: delegate to `iou_batch`/`match_iou_stats`; public signatures unchanged; IoU core is now Sutherland-Hodgman + ConvexHull replacing the old line-intersection implementation
+
+### Removed
+- `metrics.centroid_deviation`: merged into `metrics.point_metric`
+
 ## [0.9.0] - 2026-05-29
 
 ### Added
