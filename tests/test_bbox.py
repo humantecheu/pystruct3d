@@ -99,14 +99,14 @@ def test_fit_horizontal_aligned_empty_warns():
 def test_points_in_bbox_inside():
     b = BBox.from_params(np.zeros(3), (4.0, 2.0, 3.0))
     pts_inside = np.array([[0.5, 0.5, 0.5], [1.0, 0.5, 1.0]])
-    inliers, indices = b.points_in_bbox(pts_inside)
+    _inliers, indices = b.points_in_bbox(pts_inside)
     assert len(indices) == 2
 
 
 def test_points_in_bbox_outside():
     b = BBox.from_params(np.zeros(3), (2.0, 2.0, 2.0))
     pts_outside = np.array([[10.0, 10.0, 10.0], [-5.0, 0.0, 0.0]])
-    inliers, indices = b.points_in_bbox(pts_outside)
+    _inliers, indices = b.points_in_bbox(pts_outside)
     assert len(indices) == 0
 
 

@@ -86,7 +86,7 @@ def voxelization_limits(
         else:
             raise TypeError("Arguments can either be of type np.ndarray or List[BBox]")
 
-    min_list, max_list = zip(*limits_list)
+    min_list, max_list = zip(*limits_list, strict=False)
     limits_min = np.min(np.array(min_list), axis=0).astype(int)
     limits_max = np.max(np.array(max_list), axis=0).astype(int)
     return limits_min, limits_max

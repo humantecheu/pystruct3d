@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import open3d as o3d
@@ -30,7 +30,7 @@ class Visualizer:
     def add_bbox(
         self,
         bbox: BBox | Sequence[BBox],
-        color: list[float] = [0, 1, 0],
+        color: list[float] | None = None,
         *,
         name: str | None = None,
     ) -> Visualizer:
@@ -44,6 +44,8 @@ class Visualizer:
         Returns:
             self
         """
+        if color is None:
+            color = [0, 1, 0]
         lines = [
             [0, 1],
             [1, 2],
@@ -117,7 +119,7 @@ class Visualizer:
     def add_markers(
         self,
         points: np.ndarray,
-        color: list[float] = [1, 0.706, 0],
+        color: list[float] | None = None,
         radius: float = 0.1,
         *,
         name: str | None = None,
@@ -133,6 +135,8 @@ class Visualizer:
         Returns:
             self
         """
+        if color is None:
+            color = [1, 0.706, 0]
         for pt in points:
             sphere = o3d.geometry.TriangleMesh.create_sphere(radius=radius)
             sphere.translate(pt)
@@ -143,7 +147,7 @@ class Visualizer:
     def add_coordinate_frame(
         self,
         size: float = 1.0,
-        origin: list[float] = [0.0, 0.0, 0.0],
+        origin: list[float] | None = None,
         *,
         name: str | None = None,
     ) -> Visualizer:
@@ -157,6 +161,8 @@ class Visualizer:
         Returns:
             self
         """
+        if origin is None:
+            origin = [0.0, 0.0, 0.0]
         frame = o3d.geometry.TriangleMesh.create_coordinate_frame(
             size=size, origin=origin
         )

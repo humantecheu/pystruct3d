@@ -80,12 +80,11 @@ class BBox:
         else:
             ordered_points = np.vstack((lower_points, upper_points))
             self.corner_points = ordered_points
-        if self.angle() == 0.0:
-            if lower_points[0, 0] > lower_points[1, 0]:
-                lower_points = np.roll(lower_points, shift=2, axis=0)
-                upper_points = np.roll(upper_points, shift=2, axis=0)
-                ordered_points = np.vstack((lower_points, upper_points))
-                self.corner_points = ordered_points
+        if self.angle() == 0.0 and lower_points[0, 0] > lower_points[1, 0]:
+            lower_points = np.roll(lower_points, shift=2, axis=0)
+            upper_points = np.roll(upper_points, shift=2, axis=0)
+            ordered_points = np.vstack((lower_points, upper_points))
+            self.corner_points = ordered_points
 
     def rotate(self, angle: float) -> None:
         """Rotate counter-clockwise around the Z-axis through the box centre.
@@ -652,7 +651,7 @@ class BBox:
         ])
         # fmt:on
 
-    def fit_horizontal_aligned(self, points: np.ndarray) -> "BBox":
+    def fit_horizontal_aligned(self, points: np.ndarray) -> BBox:
         """Fit a minimum-volume Z-aligned bounding box (rotating calipers).
 
         Projects to XY, builds a convex hull, then tests one candidate rotation
@@ -716,7 +715,7 @@ class BBox:
         self.order_points()
         return self
 
-    def fit_minimal(self) -> "BBox":
+    def fit_minimal(self) -> BBox:
         raise NotImplementedError
 
     def bbox_from_verts(

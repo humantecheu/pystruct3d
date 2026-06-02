@@ -38,3 +38,19 @@ indent-width = 4
 [tool.ruff.format]
 quote-style = "double"
 preview     = true
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "C4", "SIM", "UP", "RUF", "PERF", "FURB", "PLR"]
+ignore = [
+    "E501",    # line too long — formatter enforces line-length
+    "INP001",  # implicit namespace package — scripts/ intentionally has no __init__.py
+    "PLR0124", # self-comparison — intentional NaN checks (x != x idiom)
+    "PLR0912", # too many branches — large existing UI/script functions
+    "PLR0913", # too many arguments — existing pipeline/UI functions
+    "PLR0915", # too many statements — large existing UI/script functions
+    "PLR2004", # magic-value comparisons — numeric constants throughout scientific code
+    "RUF001",  # ambiguous Unicode in strings — math notation (×, −, …)
+    "RUF002",  # ambiguous Unicode in docstrings — math notation
+    "RUF003",  # ambiguous Unicode in comments — math notation
+    "SIM105",  # contextlib.suppress — try/except/pass is intentional here
+]

@@ -15,4 +15,4 @@ class Visualization(Visualizer):
         super().__init__(*args, **kwargs)
 
 
-__all__ = ["Visualizer", "Visualization"]
+__all__ = ["Visualization", "Visualizer"]
