@@ -7,6 +7,8 @@
 #   - RigidRegistration (a verbatim pycpd copy) is not ported; add `pycpd` as a
 #     dependency and use pycpd.RigidRegistration directly if CPD alignment is needed.
 
+from contextlib import suppress
+
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import ConvexHull, QhullError
@@ -107,10 +109,8 @@ def _pairwise_intersection_2d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
                 # Treat intersection area as 0 (conservative).
                 continue
             if inter is not None:
-                try:
+                with suppress(QhullError, ValueError):
                     result[i, j] = ConvexHull(inter, qhull_options="QJ Pp").volume
-                except (QhullError, ValueError):
-                    pass
     return result
 
 

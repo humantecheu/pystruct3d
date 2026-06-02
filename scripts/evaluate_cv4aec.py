@@ -149,7 +149,7 @@ def _visualize_2d(
     import matplotlib.pyplot as plt
     from matplotlib.patches import Polygon
 
-    fig, ax = plt.subplots(figsize=(10, 10))
+    _fig, ax = plt.subplots(figsize=(10, 10))
 
     for box in gt_boxes:
         xy = box.corner_points[:4, :2]

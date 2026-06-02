@@ -52,5 +52,4 @@ ignore = [
     "RUF001",  # ambiguous Unicode in strings — math notation (×, −, …)
     "RUF002",  # ambiguous Unicode in docstrings — math notation
     "RUF003",  # ambiguous Unicode in comments — math notation
-    "SIM105",  # contextlib.suppress — try/except/pass is intentional here
 ]

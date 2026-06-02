@@ -1,6 +1,5 @@
+from contextlib import suppress
 from importlib.metadata import PackageNotFoundError, version
 
-try:
+with suppress(PackageNotFoundError):
     __version__ = version("pystruct3d")
-except PackageNotFoundError:
-    pass  # package is not installed or doesn't exist
