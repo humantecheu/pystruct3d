@@ -47,7 +47,7 @@ def filter_ids(
         Tuple of (indices, filtered_points) where indices has shape (k,) and
         filtered_points has shape (k, 3).
     """
-    indices = np.where(label_arr == int(label_id))[0]
+    indices = np.where(label_arr == label_id)[0]
     return indices, points[indices]
 
 
@@ -55,7 +55,7 @@ def labels_to_color(labels: np.ndarray) -> np.ndarray:
     """Map an integer label array to RGB colors using the tab20 palette.
 
     Background points (label <= 0) are mapped to black. Positive labels cycle
-    through the 20-color tab20 palette.
+    through the 20-color tab20 palette via modulo, so labels > 20 wrap around.
 
     Args:
         labels: Integer label array of shape (n,).

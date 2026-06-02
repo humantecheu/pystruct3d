@@ -44,10 +44,10 @@ def crop_roi(
     min_x, min_y = np.min(xyz[:, :2], axis=0)
     max_x, max_y = np.max(xyz[:, :2], axis=0)
 
-    d_min_x = min_x // resolution_m - 1 if min_x < 0 else min_x // resolution_m
-    d_max_x = max_x // resolution_m if max_x < 0 else max_x // resolution_m + 1
-    d_min_y = min_y // resolution_m - 1 if min_y < 0 else min_y // resolution_m
-    d_max_y = max_y // resolution_m if max_y < 0 else max_y // resolution_m + 1
+    d_min_x = np.floor(min_x / resolution_m)
+    d_max_x = np.floor(max_x / resolution_m) + 1
+    d_min_y = np.floor(min_y / resolution_m)
+    d_max_y = np.floor(max_y / resolution_m) + 1
 
     n_x_bins = int(d_max_x - d_min_x)
     n_y_bins = int(d_max_y - d_min_y)
@@ -58,7 +58,9 @@ def crop_roi(
         bins=(n_x_bins, n_y_bins),
         range=((d_min_x, d_max_x), (d_min_y, d_max_y)),
     )
-    mask = (xy_hist / np.max(xy_hist)) > threshold
+    if xy_hist.max() == 0:
+        return xyz, rgb, (float(min_x), float(max_x)), (float(min_y), float(max_y))
+    mask = (xy_hist / xy_hist.max()) > threshold
 
     bmin, bmax = _mask_boundaries(mask, int(margin_m // resolution_m))
 

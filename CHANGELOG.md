@@ -3,6 +3,43 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] - 2026-06-01
+
+### Added
+- `bbox/__init__.py`: exports `BBox` — `from pystruct3d.bbox import BBox` now works
+- `metrics/__init__.py`: exports `bbox_iou`, `iou_batch`, `match_iou_stats`, `mean_bbox_iou`, `vertex_precision_recall`, `centroid_deviation`
+- `annotation/__init__.py`: exports `transfer_labels`
+- `preprocessing/__init__.py`: added `downsample` and `density_filter` to re-exports; added `__all__`
+- `preprocessing.alignment.align_to_axes`: `seed` parameter (default `0`) to control random state
+- `tests/conftest.py`: shared fixtures for the test suite
+- `tests/test_preprocessing.py`: 18 tests covering `simple_pca`, `rotate_by_pca`, `crop_roi`, `downsample`, `density_filter`
+- `tests/test_bbox.py`: 18 tests covering `BBox` construction, dimensions, fitting, containment, IoU, translate, expand, rotate
+
+### Fixed
+- `preprocessing.voxel.downsample`: removed unbounded `np.empty(np.prod(grid_size))` allocation; replaced with `np.searchsorted` — safe for large sparse grids; added empty-input guard
+- `preprocessing.voxel.density_filter`: replaced `np.bincount(minlength=np.prod(grid_size))` with `np.unique(return_inverse=True, return_counts=True)` — same fix
+- `preprocessing.crop.crop_roi`: replaced fragile negative/positive branch bin-edge logic with uniform `np.floor`; added zero-histogram guard (no longer raises `ZeroDivisionError` on near-empty input)
+- `metrics.bbox_iou._pairwise_intersection_2d`: replaced bare `except Exception` with `except (QhullError, ValueError)`
+- `bbox.BBox.points_in_bbox`: removed redundant `Exception` from except clause; fixed empty-result index dtype (`np.intp`) to prevent `IndexError`
+- `bbox.BBox.expand`: fixed `widht_vector` typo → `width_vector`
+- `metrics.point_metric.vertex_precision_recall`: symmetric empty-input guard (handles empty GT as well as empty pred)
+
+### Removed duplications
+- `metrics.voxelization_limits`: added private `_set_iou` (set intersection/union) and `_weighted_mean_iou` (GT-weighted average); `mean_voxel_iou` and `mean_volumetric_iou` now delegate to these instead of duplicating the same loop
+- `metrics.voxel_iou` and `metrics.volumetric_iou`: both delegate their IoU computation to `_set_iou` — the two functions remain distinct (point cloud voxelization vs BBox interior voxelization)
+- `preprocessing.voxel`: extracted private `_to_flat_voxel_indices` helper; `downsample` and `density_filter` both use it instead of duplicating the voxel grid construction
+- `bbox.BBox.length` and `bbox.BBox.width`: now delegate to `_dimensions()` instead of each calling `lower_edges()` independently
+- `annotation.utils.read_e57_as_point_cloud`: removed — was an unused Open3D wrapper around `io.e57.read_e57_file`; callers can construct an `o3d.PointCloud` directly from the numpy arrays that `read_e57_file` returns. The dead `main()` demo (hardcoded paths) was removed at the same time.
+- `bbox/__init__.py`: exports `bbox_list2array` and `bbox_array2list`; `metrics.bbox_iou.mean_bbox_iou` now uses `bbox_list2array` instead of an inline equivalent
+
+### Changed
+- `bbox.BBox.points_in_bbox`: removed unused `tolerance` parameter
+- `bbox.BBox`: replaced two `# BUG` comments with `# KNOWN LIMITATION:` descriptions
+- `io.las`: removed empty `split_pcd_z()` stub
+- `preprocessing.labels.filter_ids`: removed redundant `int()` cast on `label_id`
+- `preprocessing.labels.labels_to_color`: docstring clarifies modulo wrapping for labels > 20
+- `preprocessing.alignment._dominant_wall_angle`: inline comments explain the `< 200` pairs threshold and 10th-percentile fallback
+
 ## [0.11.0] - 2026-06-01
 
 ### Added

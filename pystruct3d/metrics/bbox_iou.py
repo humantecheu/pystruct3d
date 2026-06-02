@@ -9,9 +9,10 @@
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment
-from scipy.spatial import ConvexHull
+from scipy.spatial import ConvexHull, QhullError
 
 from pystruct3d.bbox.bbox import BBox
+from pystruct3d.bbox.utils import bbox_list2array
 from pystruct3d.testing import create_bbox_lists
 from pystruct3d.visualization import Visualizer
 
@@ -108,7 +109,7 @@ def _pairwise_intersection_2d(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
             if inter is not None:
                 try:
                     result[i, j] = ConvexHull(inter, qhull_options="QJ Pp").volume
-                except Exception:
+                except (QhullError, ValueError):
                     pass
     return result
 
@@ -243,8 +244,8 @@ def mean_bbox_iou(
     Returns:
         Mean IoU of the optimal assignment.
     """
-    gt_c = np.stack([b.corner_points for b in groundtruth_bbox_list])
-    pd_c = np.stack([b.corner_points for b in predicted_bbox_list])
+    gt_c = bbox_list2array(groundtruth_bbox_list)
+    pd_c = bbox_list2array(predicted_bbox_list)
     return match_iou_stats(gt_c, pd_c)["mean"]
 
 

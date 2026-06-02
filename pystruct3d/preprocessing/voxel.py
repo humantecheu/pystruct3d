@@ -1,6 +1,27 @@
 import numpy as np
 
 
+def _to_flat_voxel_indices(points: np.ndarray, voxel_size: float) -> np.ndarray:
+    """Map each point to a flat voxel index in a local grid.
+
+    Args:
+        points: (n, 3) point array.
+        voxel_size: Edge length of each cubic voxel.
+
+    Returns:
+        (n,) flat voxel index per point (row-major over the local grid).
+    """
+    min_coords = points.min(axis=0)
+    grid_size = np.maximum(
+        np.ceil((points.max(axis=0) - min_coords) / voxel_size).astype(int), 1
+    )
+    voxel_coords = np.minimum(
+        np.floor((points - min_coords) / voxel_size).astype(int),
+        grid_size - 1,
+    )
+    return np.ravel_multi_index(voxel_coords.T, grid_size)
+
+
 def downsample(points: np.ndarray, voxel_size: float) -> tuple[np.ndarray, np.ndarray]:
     """Voxel-downsample a point cloud and return the mapping back to the original.
 
@@ -18,26 +39,19 @@ def downsample(points: np.ndarray, voxel_size: float) -> tuple[np.ndarray, np.nd
         voxel_idx: (n,) integer array — voxel_idx[i] is the index in down_pts
             of the voxel that contains original point i.
     """
-    min_coords = points.min(axis=0)
-    grid_size = np.maximum(
-        np.ceil((points.max(axis=0) - min_coords) / voxel_size).astype(int), 1
-    )
-    voxel_coords = np.minimum(
-        np.floor((points - min_coords) / voxel_size).astype(int),
-        grid_size - 1,
-    )
-    flat = np.ravel_multi_index(voxel_coords.T, grid_size)
+    if points.shape[0] == 0:
+        return points, np.empty(0, dtype=np.intp)
+
+    flat = _to_flat_voxel_indices(points, voxel_size)
 
     sort_idx = np.argsort(flat)
     unique_flat, first = np.unique(flat[sort_idx], return_index=True)
     counts = np.diff(np.append(first, len(flat)))
     down_pts = np.add.reduceat(points[sort_idx], first, axis=0) / counts[:, np.newaxis]
 
-    # Map each original point directly to its voxel's index in down_pts.
-    # Avoids a KDTree query — the voxel assignment is already known.
-    voxel_to_down = np.empty(int(np.prod(grid_size)), dtype=np.intp)
-    voxel_to_down[unique_flat] = np.arange(len(unique_flat))
-    voxel_idx = voxel_to_down[flat]
+    # searchsorted maps each flat voxel index to its rank in unique_flat in
+    # O(n log m) — avoids allocating the full voxel grid.
+    voxel_idx = np.searchsorted(unique_flat, flat)
 
     return down_pts, voxel_idx
 
@@ -58,16 +72,8 @@ def density_filter(
     if len(points) == 0:
         return points
 
-    min_coords = points.min(axis=0)
-    max_coords = points.max(axis=0)
-    grid_size = np.ceil((max_coords - min_coords) / voxel_size).astype(int)
-    grid_size = np.maximum(grid_size, 1)
-
-    voxel_coords = np.floor((points - min_coords) / voxel_size).astype(int)
-    voxel_coords = np.minimum(voxel_coords, grid_size - 1)
-
-    indices = np.ravel_multi_index(voxel_coords.T, grid_size)
-    voxel_counts = np.bincount(indices, minlength=int(np.prod(grid_size)))
-    mask = voxel_counts[indices] >= min_points
+    flat = _to_flat_voxel_indices(points, voxel_size)
+    _, inverse, counts = np.unique(flat, return_inverse=True, return_counts=True)
+    mask = counts[inverse] >= min_points
 
     return points[mask]

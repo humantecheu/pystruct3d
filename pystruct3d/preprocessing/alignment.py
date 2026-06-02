@@ -7,6 +7,7 @@ def _dominant_wall_angle(
     n_pairs: int = 30000,
     min_dist: float = 0.5,
     n_bins: int = 720,
+    seed: int | None = 0,
 ) -> float:
     """Estimate the dominant wall orientation from an XY point set.
 
@@ -21,11 +22,13 @@ def _dominant_wall_angle(
         n_pairs: Number of random point pairs to evaluate.
         min_dist: Minimum XY separation (metres) to accept a pair.
         n_bins: Histogram resolution over [0, π).
+        seed: Random seed for reproducibility. Pass None for non-deterministic
+            results. Defaults to 0.
 
     Returns:
         Dominant wall angle in radians, in [0, π).
     """
-    rng = np.random.default_rng(0)
+    rng = np.random.default_rng(seed)
 
     if len(xy) > n_samples:
         xy = xy[rng.choice(len(xy), n_samples, replace=False)]
@@ -37,7 +40,8 @@ def _dominant_wall_angle(
     dist = np.hypot(delta[:, 0], delta[:, 1])
 
     mask = dist > min_dist
-    # if the cloud is very small, relax the threshold
+    # Fewer than 200 qualifying pairs gives an unreliable histogram peak;
+    # fall back to the 10th-percentile distance so at least 90 % of pairs qualify.
     if mask.sum() < 200:
         min_dist = np.percentile(dist, 10)
         mask = dist > min_dist
@@ -52,6 +56,7 @@ def align_to_axes(
     points: np.ndarray,
     labels: np.ndarray | None = None,
     wall_label: int | None = None,
+    seed: int | None = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Rotate a point cloud so its walls align with the X/Y axes.
 
@@ -67,6 +72,8 @@ def align_to_axes(
         points: (N, 3) array of XYZ point coordinates.
         labels: (N,) integer label array, optional.
         wall_label: Label value for wall points.  If None, all points are used.
+        seed: Random seed forwarded to the angle estimator. Pass None for
+            non-deterministic results. Defaults to 0.
 
     Returns:
         rotated_points: (N, 3) array with the rotation applied.
@@ -78,7 +85,7 @@ def align_to_axes(
         else points
     )
 
-    angle = _dominant_wall_angle(source[:, :2])
+    angle = _dominant_wall_angle(source[:, :2], seed=seed)
 
     c, s = np.cos(-angle), np.sin(-angle)
     rotation_matrix = np.array([

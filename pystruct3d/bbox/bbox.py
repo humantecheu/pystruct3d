@@ -54,8 +54,8 @@ class BBox:
             )
         ]
 
-        # BUG
-        # check if edge [0] - [1] is longer than [1] - [2]
+        # KNOWN LIMITATION: after CCW ordering the longest edge is not
+        # guaranteed to be [0]→[1]; the roll below is a best-effort correction.
         len_edge01 = np.linalg.norm(lower_points[1] - lower_points[0])
         len_edge12 = np.linalg.norm(lower_points[2] - lower_points[1])
 
@@ -128,18 +128,13 @@ class BBox:
             return self.points_in_bbox_soft(points, probability_threshold)
         return self.points_in_bbox(points)
 
-    def points_in_bbox(
-        self, points: np.ndarray, tolerance: float = 1e-12
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def points_in_bbox(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Find the points inside the bounding box.
 
         Uses Open3D OrientedBoundingBox for containment testing.
-        The ``tolerance`` parameter is retained for API compatibility but is
-        not forwarded to the Open3D backend.
 
         Args:
             points (np.ndarray): points, numpy array of shape (n, 3)
-            tolerance (float, optional): kept for API compatibility. Defaults to 1e-12.
 
         Returns:
             np.ndarray: inlier points
@@ -150,10 +145,11 @@ class BBox:
             indices = np.asarray(
                 obb.get_point_indices_within_bounding_box(
                     o3d.utility.Vector3dVector(points)
-                )
+                ),
+                dtype=np.intp,
             )
             return points[indices], indices
-        except (QhullError, ValueError, Exception):
+        except (QhullError, ValueError):
             return np.empty((0,)), np.empty((0,))
 
     def points_in_bbox_2d(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -273,8 +269,8 @@ class BBox:
         """Expand the bounding box to either direction with a given offset"""
         length_vector = self.corner_points[1] - self.corner_points[0]
         length_vector_norm = length_vector / np.linalg.norm(length_vector)
-        widht_vector = self.corner_points[2] - self.corner_points[1]
-        width_vector_norm = widht_vector / np.linalg.norm(widht_vector)
+        width_vector = self.corner_points[2] - self.corner_points[1]
+        width_vector_norm = width_vector / np.linalg.norm(width_vector)
 
         length_offset = offset * length_vector_norm
         width_offset = offset * width_vector_norm
@@ -334,11 +330,7 @@ class BBox:
         x---------------x
           <--Length-->     
         """
-        edges = self.lower_edges()
-        lengths = np.linalg.norm(edges, axis=1)
-        length = np.max(lengths)
-
-        return length
+        return self._dimensions()[0]
 
     def width(self):
         """returns the width (base plane), always smaller dimension
@@ -347,22 +339,18 @@ class BBox:
             float: width
         """
         """     x-------------------x
-               /                   /| 
+               /                   /|
               /                   / |
              /                   /  |
             x-------------------x   |
-            |   |               |   | 
+            |   |               |   |
             |   x---------------|---x   w
             |  /                |  /   i
             | /                 | /   d
             |/                  |/   t
             x-------------------x   h
         """
-        edges = self.lower_edges()
-        lengths = np.linalg.norm(edges, axis=1)
-        width = np.min(lengths)
-
-        return width
+        return self._dimensions()[1]
 
     def height(self):
         """Returns the height of the bounding box
@@ -467,7 +455,7 @@ class BBox:
     def axis_align(self):
         """Axis aligns the bounding box. Calculates the minimum value against the
         x-axis, then rotates the box with this value."""
-        # BUG: aligns bounding box to x-axis always
+        # KNOWN LIMITATION: snaps to nearest 45° boundary, not always the x-axis
         ang = self.angle()
         if ang <= 45:
             self.rotate(-ang)

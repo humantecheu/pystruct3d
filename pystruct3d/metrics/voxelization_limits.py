@@ -4,6 +4,26 @@ from pystruct3d.bbox.bbox import BBox
 from pystruct3d.bbox.utils import bbox_list2array
 
 
+def _set_iou(a_indices: np.ndarray, b_indices: np.ndarray) -> float:
+    """IoU of two sorted flat voxel index arrays (set intersection / union)."""
+    len_intersect = len(np.intersect1d(a_indices, b_indices))
+    len_union = len(np.union1d(a_indices, b_indices))
+    return len_intersect / len_union if len_union > 0 else 0.0
+
+
+def _weighted_mean_iou(classes_iou: list[tuple[float, int]]) -> float:
+    """GT-voxel-weighted mean IoU across classes.
+
+    Args:
+        classes_iou: list of (iou, num_gt_voxels) per class.
+
+    Returns:
+        Mean IoU weighted by the number of GT voxels per class.
+    """
+    total_gt_voxels = sum(gt_voxels for _, gt_voxels in classes_iou)
+    return sum(iou * gt_voxels / total_gt_voxels for iou, gt_voxels in classes_iou)
+
+
 def pointcloud_limits(pointcloud: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Compute the integer-snapped AABB of a point cloud.
 

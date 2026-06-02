@@ -56,7 +56,3 @@ def write_las_file(las_path: Path | str, xyz: np.ndarray, rgb: np.ndarray) -> No
     las.blue = (rgb[:, 2] * 255).astype(int)
 
     las.write(str(las_path))
-
-
-def split_pcd_z():
-    pass

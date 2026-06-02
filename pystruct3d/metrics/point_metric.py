@@ -42,7 +42,7 @@ def vertex_precision_recall(
 
     result: dict[float, dict[str, float]] = {}
 
-    if pred_verts.shape[0] == 0:
+    if gt_verts.shape[0] == 0 or pred_verts.shape[0] == 0:
         for t in thresholds:
             result[t] = {"precision": 0.0, "recall": 0.0, "f1": 0.0, "matched": 0}
         return result

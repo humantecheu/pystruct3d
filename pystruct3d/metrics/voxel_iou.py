@@ -1,6 +1,10 @@
 import numpy as np
 
-from pystruct3d.metrics.voxelization_limits import voxelization_limits
+from pystruct3d.metrics.voxelization_limits import (
+    _set_iou,
+    _weighted_mean_iou,
+    voxelization_limits,
+)
 
 
 def voxelize_pointcloud(
@@ -60,10 +64,7 @@ def voxel_iou(
     groundtruth_indices = voxelize_pointcloud(groundtruth_pc, volume_limits, voxel_size)
     predicted_indices = voxelize_pointcloud(predicted_pc, volume_limits, voxel_size)
 
-    len_intersect = len(np.intersect1d(groundtruth_indices, predicted_indices))
-    len_union = len(np.union1d(groundtruth_indices, predicted_indices))
-
-    iou = len_intersect / len_union
+    iou = _set_iou(groundtruth_indices, predicted_indices)
     num_gt_voxels = len(groundtruth_indices)
     return iou, num_gt_voxels
 
@@ -78,8 +79,7 @@ def mean_voxel_iou(classes_iou: list[tuple[float, int]]) -> float:
     Returns:
         Mean IoU weighted by the number of GT voxels per class.
     """
-    total_gt_voxels = sum(gt_voxels for _, gt_voxels in classes_iou)
-    return sum(iou * gt_voxels / total_gt_voxels for iou, gt_voxels in classes_iou)
+    return _weighted_mean_iou(classes_iou)
 
 
 def main() -> None:
