@@ -3,6 +3,30 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0] - 2026-06-03
+
+### Added
+- `testing` module added to README features list
+- `tqdm` added as an explicit dependency (was already a transitive dep via open3d)
+
+### Changed
+- `requires-python` lowered from `>=3.12` to `>=3.10` — the true minimum given the `X | Y` union syntax used in annotations
+- All dependencies now carry explicit minimum version floors (`open3d>=0.18.0`, `numpy>=1.24.0`, `scipy>=1.11.0`, `laspy>=2.0.0`, `matplotlib>=3.7.0`, `pye57>=0.4.0`, `tqdm>=4.60.0`) to prevent backsliding on older Python versions
+- `[tool.setuptools.packages.find]` set to `include = ["pystruct3d*"]` — `tests/` and `scripts/` are now explicitly excluded from the installed wheel
+- README: installation now shows `pip install git+https://...`; redundant Requirements section removed
+- `BBox.translate_z(**kwargs)` → `BBox.translate_z(*, min_z: float | None = None, max_z: float | None = None)` — explicit typed keyword params; backwards-compatible for all callers using keyword arguments
+- `annotation.transfer_labels`: `print()` progress replaced with `tqdm` progress bar
+- Completed return-type annotations across `BBox` (`__str__`, `order_points`, `translate`, `translate_z`, `transform_xy`, `expand`, `lower_edges`, `dir_vector_norm`, `axis_align`, `as_np_array`, `get_center_plane`, `get_side_planes`, `length`, `width`)
+- Completed parameter-type annotations: `BBox.expand(offset: float)`, `BBox.split_bounding_box(offset: float)`, `BBox.project_into_parent(parent_bbox: BBox)`
+- Docstrings added to previously undocumented `BBox` methods: `transform_xy`, `lower_edges`, `dir_vector_norm`, `as_np_array`, `get_center_plane`, `get_side_planes`
+- `BBox.length` / `BBox.width`: merged dead second docstring (ASCII art) into the primary docstring as a `::` code block
+- `metrics.volumetric_iou.main`: added `-> None` return annotation
+
+### Fixed
+- `io.las.read_las_file`: replaced `assert` (disabled by `-O`) with `raise ValueError`
+- `io.las`: removed two now-unused `# type: ignore` comments
+- `annotation.transfer_labels`: removed bare `print()` calls (violated AGENTS.md "no debug print in library code")
+
 ## [0.12.0] - 2026-06-01
 
 ### Added

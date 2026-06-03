@@ -17,15 +17,16 @@ class BBox:
         if np.any(self.corner_points):
             self.order_points()
 
-    def __str__(self):
+    def __str__(self) -> str:
         string = f"Bounding Box with points {self.corner_points}"
         return string
 
-    def order_points(self):
-        """
-        Orders the points of a 3D bounding box aligned with the z-axis in
-        counter-clockwise direction, with condition that edge [0] - [1]
-        is along the length == longer horizontal dimension
+    def order_points(self) -> None:
+        """Order corner points counter-clockwise with the length edge at [0]→[1].
+
+        Sorts all 8 corners into lower (z-min) and upper (z-max) groups, orders
+        each group counter-clockwise in XY, then rolls the result so that edge
+        [0]→[1] runs along the longer horizontal dimension (length).
         """
         # Split points into two groups based on the z-coordinate
         self.corner_points = self.corner_points[self.corner_points[:, 2].argsort()]
@@ -224,26 +225,29 @@ class BBox:
         indices = np.flatnonzero(pdf > threshold)
         return points[indices], indices, pdf
 
-    def translate(self, translation_vector: np.ndarray):  # shape (3, )
-        """translate the bounding box along a given vector
+    def translate(self, translation_vector: np.ndarray) -> None:  # shape (3, )
+        """Translate the bounding box along a given vector.
 
         Args:
-            translation_vector (np.ndarray): translation vector
+            translation_vector: shape (3,) XYZ translation.
         """
         self.corner_points += translation_vector
 
-    def translate_z(self, **kwargs):
-        """translates the bounding box 4 lower points to min_z or the four top points to max_z respectively
+    def translate_z(
+        self, *, min_z: float | None = None, max_z: float | None = None
+    ) -> None:
+        """Translate the lower or upper face of the bounding box to a given Z level.
 
-        Kwargs:
-            min_z (float): minimum z value
-            max_z (float): maximum z value
-
+        Args:
+            min_z: target Z coordinate for the four lower corners. Defaults to
+                the current lower-face Z (no change).
+            max_z: target Z coordinate for the four upper corners. Defaults to
+                the current upper-face Z (no change).
         """
-
-        # get keyword arguments
-        min_z = kwargs.get("min_z", self.corner_points[0, 2])
-        max_z = kwargs.get("max_z", self.corner_points[4, 2])
+        if min_z is None:
+            min_z = float(self.corner_points[0, 2])
+        if max_z is None:
+            max_z = float(self.corner_points[4, 2])
 
         min_zs = np.full((4,), min_z)
         max_zs = np.full((4,), max_z)
@@ -251,7 +255,16 @@ class BBox:
         self.corner_points[:4, 2] = min_zs
         self.corner_points[4:8, 2] = max_zs
 
-    def transform_xy(self, xy_dimension: float):
+    def transform_xy(self, xy_dimension: float) -> None:
+        """Resize the bounding box to a square footprint of given side length.
+
+        Replaces all 8 corner points so the box has a square XY footprint of
+        ``xy_dimension`` × ``xy_dimension``, centred on the current lower and
+        upper face centroids.  The Z extent is preserved.
+
+        Args:
+            xy_dimension: side length of the square footprint in metres.
+        """
         lower_center = np.mean(self.corner_points[:4], axis=0)
         upper_center = np.mean(self.corner_points[4:8], axis=0)
         add_dim = xy_dimension / 2
@@ -264,8 +277,13 @@ class BBox:
         self.corner_points[6] = upper_center + np.array([[+add_dim, +add_dim, 0]])
         self.corner_points[7] = upper_center + np.array([[-add_dim, +add_dim, 0]])
 
-    def expand(self, offset):
-        """Expand the bounding box to either direction with a given offset"""
+    def expand(self, offset: float) -> None:
+        """Expand the bounding box outward by ``offset`` in all three dimensions.
+
+        Args:
+            offset: distance in metres to expand in each direction (positive
+                expands, negative contracts).
+        """
         length_vector = self.corner_points[1] - self.corner_points[0]
         length_vector_norm = length_vector / np.linalg.norm(length_vector)
         width_vector = self.corner_points[2] - self.corner_points[1]
@@ -301,7 +319,13 @@ class BBox:
             self.corner_points[7] - length_offset + width_offset + height_offset
         )
 
-    def lower_edges(self):
+    def lower_edges(self) -> np.ndarray:
+        """Return the four edge vectors of the lower (z-min) face.
+
+        Returns:
+            shape (4, 3) array of edge vectors, ordered to match the
+            counter-clockwise corner ordering of the lower face.
+        """
         lower_points = self.corner_points[:4]
         lower_points_rolled = np.roll(lower_points, 1, axis=0)
         edges = lower_points_rolled - lower_points
@@ -313,41 +337,44 @@ class BBox:
         edge_lengths = np.linalg.norm(self.lower_edges(), axis=1)
         return float(np.max(edge_lengths)), float(np.min(edge_lengths))
 
-    def length(self):
-        """returns the length (base plane), always larger dimension
+    def length(self) -> float:
+        """Return the length (longer horizontal dimension) of the bounding box.
+
+        ::
+
+              x---------------x
+             /|              /|
+            x---------------x |
+            | |             | |
+            | x-------------|-x
+            |/              |/
+            x---------------x
+              <--Length-->
 
         Returns:
-            float: length
-        """
-        """      
-          x---------------x 
-         /|              /|
-        x---------------x |
-        | |             | |
-        | x-------------|-x 
-        |/              |/ 
-        x---------------x
-          <--Length-->     
+            Length in the same units as the corner points.
         """
         return self._dimensions()[0]
 
-    def width(self):
-        """returns the width (base plane), always smaller dimension
+    def width(self) -> float:
+        """Return the width (shorter horizontal dimension) of the bounding box.
+
+        ::
+
+                 x-------------------x
+                /                   /|
+               /                   / |
+              /                   /  |
+             x-------------------x   |
+             |   |               |   |
+             |   x---------------|---x   w
+             |  /                |  /   i
+             | /                 | /   d
+             |/                  |/   t
+             x-------------------x   h
 
         Returns:
-            float: width
-        """
-        """     x-------------------x
-               /                   /|
-              /                   / |
-             /                   /  |
-            x-------------------x   |
-            |   |               |   |
-            |   x---------------|---x   w
-            |  /                |  /   i
-            | /                 | /   d
-            |/                  |/   t
-            x-------------------x   h
+            Width in the same units as the corner points.
         """
         return self._dimensions()[1]
 
@@ -384,11 +411,16 @@ class BBox:
         return angle
 
     def dir_vector_norm(self) -> np.ndarray:
+        """Return the unit vector along the length edge ([0]→[1]).
+
+        Returns:
+            shape (3,) unit vector.
+        """
         direction_vec = self.corner_points[1] - self.corner_points[0]
         dir_norm = direction_vec / np.linalg.norm(direction_vec)
         return dir_norm
 
-    def project_into_parent(self, parent_bbox):
+    def project_into_parent(self, parent_bbox: BBox) -> None:
         """Project bounding box into parent bounding box e.g., door bounding box
         into parent wall. Projection is based on the parent normal, assuming
         that child objects can only be projected along the width i.e., along the main
@@ -421,7 +453,7 @@ class BBox:
         self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
         self.order_points()
 
-    def split_bounding_box(self, offset=0.2):
+    def split_bounding_box(self, offset: float = 0.2) -> BBox:
         """Splits the bounding box into two. Modifies self, returns the other box
 
         Returns:
@@ -451,9 +483,8 @@ class BBox:
 
         return other_box
 
-    def axis_align(self):
-        """Axis aligns the bounding box. Calculates the minimum value against the
-        x-axis, then rotates the box with this value."""
+    def axis_align(self) -> None:
+        """Axis-align the bounding box by snapping to the nearest 90° boundary."""
         # KNOWN LIMITATION: snaps to nearest 45° boundary, not always the x-axis
         ang = self.angle()
         if ang <= 45:
@@ -465,7 +496,12 @@ class BBox:
         else:
             self.rotate(180 - ang)
 
-    def as_np_array(self):
+    def as_np_array(self) -> np.ndarray:
+        """Return the corner points as a numpy array.
+
+        Returns:
+            shape (8, 3) array of corner points (same object as ``self.corner_points``).
+        """
         return self.corner_points
 
     def to_o3d(self) -> o3d.geometry.OrientedBoundingBox:
@@ -597,23 +633,38 @@ class BBox:
 
         return endpts
 
-    def get_center_plane(self):
+    def get_center_plane(self) -> np.ndarray:
+        """Return the plane equation of the centre plane along the width axis.
+
+        The centre plane bisects the bounding box perpendicular to the width
+        direction (i.e., it runs through the middle of the box along its length
+        and height axes).
+
+        Returns:
+            shape (4,) array ``[a, b, c, d]`` representing ``ax + by + cz + d = 0``,
+            where ``[a, b, c]`` is the unit normal in the width direction.
+        """
         width_vector = self.corner_points[3] - self.corner_points[0]
         plane_normal = width_vector / np.linalg.norm(width_vector)
 
         plane_point = self.corner_points[0] + 0.5 * width_vector
 
-        # plane equation: ax + by + cx + d = 0
-
         d = np.negative(np.sum(plane_normal * plane_point))
         plane_equation = np.append(plane_normal, d)
         return plane_equation
 
-    def get_side_planes(self):
+    def get_side_planes(self) -> tuple[np.ndarray, np.ndarray]:
+        """Return the plane equations of the two side faces along the width axis.
+
+        Both planes share the same unit normal (the width direction); they
+        differ only in their offset term ``d``.
+
+        Returns:
+            plane1: shape (4,) ``[a, b, c, d]`` for the face at corner[0].
+            plane2: shape (4,) ``[a, b, c, d]`` for the face at corner[3].
+        """
         width_vector = self.corner_points[3] - self.corner_points[0]
         plane_normal = width_vector / np.linalg.norm(width_vector)
-
-        # plane equation: ax + by + cx + d = 0
 
         d1 = np.negative(np.sum(plane_normal * self.corner_points[0]))
         d2 = np.negative(np.sum(plane_normal * self.corner_points[3]))

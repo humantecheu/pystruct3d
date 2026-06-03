@@ -15,15 +15,14 @@ def read_las_file(las_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
     if isinstance(las_path, str):
         las_path = Path(las_path)
 
-    assert las_path.suffix in [".las", ".laz"], (
-        f"File format '{las_path.suffix}' must be '.las' or '.laz'."
-    )
+    if las_path.suffix not in {".las", ".laz"}:
+        raise ValueError(f"File format '{las_path.suffix}' must be '.las' or '.laz'.")
 
     las_file = laspy.read(las_path)
 
-    xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()  # type: ignore
+    xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()
     try:
-        rgb = np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()  # type: ignore
+        rgb = np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()
         if np.max(rgb) > np.iinfo(np.uint8).max:
             rgb = rgb / np.iinfo(np.uint16).max
         elif np.max(rgb) > 1:

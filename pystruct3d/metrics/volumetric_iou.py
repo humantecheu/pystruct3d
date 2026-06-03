@@ -104,7 +104,7 @@ def mean_volumetric_iou(classes_iou: list[tuple[float, int]]) -> float:
     return _weighted_mean_iou(classes_iou)
 
 
-def main():
+def main() -> None:
     bboxes_1, bboxes_2 = create_bbox_lists()
     bboxes_1[0].rotate(30)
     volumetric_iou(bboxes_1, bboxes_2)

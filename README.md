@@ -1,10 +1,10 @@
-# pystruct3d
+# PyStruct3D
 
-![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)
+![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2604.24311-b31b1b.svg)](https://arxiv.org/abs/2604.24311)
 
-pystruct3d is an open-source Python library supporting scan-to-BIM workflows as part of the [BIMStruct3D](https://arxiv.org/abs/2604.24311) pipeline. It provides tools for fitting bounding geometry to segmented point cloud instances, evaluating reconstruction accuracy, and visualizing 3D structural elements. For accurate reconstruction it is advised to apply noise filtering to instance points beforehand, as reconstruction procedures may produce bounding geometry.
+PyStruct3D is an open-source Python library supporting scan-to-BIM workflows as part of the [BIMStruct3D](https://arxiv.org/abs/2604.24311) pipeline. It provides tools for fitting bounding geometry to segmented point cloud instances, evaluating reconstruction accuracy, and visualizing 3D structural elements. For accurate reconstruction it is advised to apply noise filtering to instance points beforehand, as reconstruction procedures may produce bounding geometry.
 
 ![Bounding boxes with points](docs/figures/wall_bbox_reconstruction.png)
 
@@ -16,28 +16,25 @@ pystruct3d is an open-source Python library supporting scan-to-BIM workflows as 
 - **annotation**: Utilities to transfer point-level annotations from an annotated point cloud to unannotated data
 - **preprocessing**: Point cloud preprocessing including axis alignment and array search utilities
 - **io**: Format-agnostic point cloud reader (`read_point_cloud`) with dedicated readers for LAS/LAZ, E57, and Open3D-compatible formats (PCD, PLY, XYZ, PTS)
+- **testing**: Synthetic data generators for benchmarking and quick demos (`generate_bounding_boxes`, `shift_bounding_boxes`, `create_bbox_lists`)
 
 pystruct3d leverages [NumPy](https://github.com/numpy/numpy) and [SciPy](https://github.com/scipy/scipy) for computational efficiency, and [Open3D](https://github.com/isl-org/Open3D) for geometry, visualization, and point cloud I/O.
 
 ## Installation
 
-Clone the repository and install from the root `pystruct3d/` directory:
+```shell
+pip install git+https://github.com/humantecheu/pystruct3d.git
+```
+
+For development (editable install from a local clone):
 
 ```shell
+git clone https://github.com/humantecheu/pystruct3d.git
+cd pystruct3d
 pip install -e .
 ```
 
-The `-e` flag is for development. For use only, `pip install .` is sufficient.
-
-## Requirements
-
-- Python 3.12+
-- NumPy
-- SciPy
-- Open3D
-- Matplotlib
-- laspy
-- pye57
+> **Python 3.10–3.12 only.** Open3D does not yet ship wheels for Python 3.13+.
 
 ## Bounding box naming convention
 
@@ -68,11 +65,7 @@ The length is always the longer horizontal dimension, width is the smaller horiz
 
 **2026-05-28 — history rewrite for author attribution**
 
-Two early commits were authored under an incorrect name and email address. The repository history was rewritten on this date to correct the attribution. If you cloned this repository before 2026-05-28, your local clone will have diverged history. Re-clone to get the corrected history:
-
-```bash
-git clone https://github.com/humantecheu/pystruct3d.git
-```
+Two early commits were authored under an incorrect name and email address. The repository history was rewritten on this date to correct the attribution. If you cloned this repository before 2026-05-28, your local clone will have diverged history — re-clone to get the corrected history.
 
 ## Acknowledgement
 
