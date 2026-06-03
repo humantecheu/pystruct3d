@@ -3,6 +3,14 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.14.1] - 2026-06-03
+
+### Fixed
+- Cap `requires-python` at `<3.13`; open3d does not yet support Python 3.13.
+
+### Changed
+- Remove `.python-version` from version control (local dev tool file).
+
 ## [0.14.0] - 2026-06-03
 
 ### Added

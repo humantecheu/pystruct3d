@@ -7,7 +7,7 @@ name            = "pystruct3d"
 description     = "Open-source Python library for bounding box fitting, evaluation metrics, and visualization in scan-to-BIM workflows"
 dynamic         = ["version"]
 readme          = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 license         = { file = "LICENSE" }
 
 authors = [
