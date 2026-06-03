@@ -3,8 +3,8 @@ import numpy as np
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.testing import create_bbox_lists
 from pystruct3d.metrics.voxelization_limits import (
-    _set_iou,
-    _weighted_mean_iou,
+    set_iou,
+    weighted_mean_iou,
     voxelization_limits,
 )
 
@@ -86,7 +86,7 @@ def volumetric_iou(
         ])
     )
 
-    iou = _set_iou(groundtruth_indices, predicted_indices)
+    iou = set_iou(groundtruth_indices, predicted_indices)
     num_gt_voxels = len(groundtruth_indices)
     return iou, num_gt_voxels
 
@@ -101,7 +101,7 @@ def mean_volumetric_iou(classes_iou: list[tuple[float, int]]) -> float:
     Returns:
         Mean IoU weighted by the number of GT voxels per class.
     """
-    return _weighted_mean_iou(classes_iou)
+    return weighted_mean_iou(classes_iou)
 
 
 def main() -> None:

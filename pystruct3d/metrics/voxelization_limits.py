@@ -4,14 +4,14 @@ from pystruct3d.bbox.bbox import BBox
 from pystruct3d.bbox.utils import bbox_list2array
 
 
-def _set_iou(a_indices: np.ndarray, b_indices: np.ndarray) -> float:
+def set_iou(a_indices: np.ndarray, b_indices: np.ndarray) -> float:
     """IoU of two sorted flat voxel index arrays (set intersection / union)."""
     len_intersect = len(np.intersect1d(a_indices, b_indices))
     len_union = len(np.union1d(a_indices, b_indices))
     return len_intersect / len_union if len_union > 0 else 0.0
 
 
-def _weighted_mean_iou(classes_iou: list[tuple[float, int]]) -> float:
+def weighted_mean_iou(classes_iou: list[tuple[float, int]]) -> float:
     """GT-voxel-weighted mean IoU across classes.
 
     Args:

@@ -1,8 +1,8 @@
 import numpy as np
 
 from pystruct3d.metrics.voxelization_limits import (
-    _set_iou,
-    _weighted_mean_iou,
+    set_iou,
+    weighted_mean_iou,
     voxelization_limits,
 )
 
@@ -64,7 +64,7 @@ def voxel_iou(
     groundtruth_indices = voxelize_pointcloud(groundtruth_pc, volume_limits, voxel_size)
     predicted_indices = voxelize_pointcloud(predicted_pc, volume_limits, voxel_size)
 
-    iou = _set_iou(groundtruth_indices, predicted_indices)
+    iou = set_iou(groundtruth_indices, predicted_indices)
     num_gt_voxels = len(groundtruth_indices)
     return iou, num_gt_voxels
 
@@ -79,7 +79,7 @@ def mean_voxel_iou(classes_iou: list[tuple[float, int]]) -> float:
     Returns:
         Mean IoU weighted by the number of GT voxels per class.
     """
-    return _weighted_mean_iou(classes_iou)
+    return weighted_mean_iou(classes_iou)
 
 
 def main() -> None:

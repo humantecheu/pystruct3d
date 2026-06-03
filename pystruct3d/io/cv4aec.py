@@ -1,7 +1,5 @@
 """Converters between BBox and the CV4AEC JSON element format."""
 
-import warnings
-
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
@@ -79,9 +77,8 @@ def bbox_from_cv4aec(cv4aec_dict: dict) -> BBox:
             box.rotate(rotation)
 
     else:
-        warnings.warn(
-            "bbox_from_cv4aec: no valid key found in dict (expected 'start_pt' or 'loc').",
-            stacklevel=2,
+        raise ValueError(
+            "bbox_from_cv4aec: no valid key found in dict (expected 'start_pt' or 'loc')."
         )
 
     return box

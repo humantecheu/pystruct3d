@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from pystruct3d.bbox import BBox
+from pystruct3d.metrics.bbox_iou import bbox_iou
 
 
 # ---------------------------------------------------------------------------
@@ -124,13 +125,13 @@ def test_points_in_bbox_mixed():
 
 def test_iou_identical_boxes():
     b = BBox.from_params(np.zeros(3), (4.0, 2.0, 3.0))
-    assert abs(b.iou(b) - 1.0) < 1e-4
+    assert abs(bbox_iou(b, b) - 1.0) < 1e-4
 
 
 def test_iou_non_overlapping():
     b1 = BBox.from_params(np.array([0.0, 0.0, 0.0]), (2.0, 2.0, 2.0))
     b2 = BBox.from_params(np.array([10.0, 0.0, 0.0]), (2.0, 2.0, 2.0))
-    assert b1.iou(b2) == pytest.approx(0.0, abs=1e-4)
+    assert bbox_iou(b1, b2) == pytest.approx(0.0, abs=1e-4)
 
 
 # ---------------------------------------------------------------------------

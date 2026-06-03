@@ -562,7 +562,7 @@ class BBox:
         ])
         # fmt:on
 
-    def fit_horizontal_aligned(self, points: np.ndarray) -> BBox:
+    def fit_horizontal_aligned(self, points: np.ndarray) -> None:
         """Fit a minimum-volume Z-aligned bounding box (rotating calipers).
 
         Projects to XY, builds a convex hull, then tests one candidate rotation
@@ -577,10 +577,10 @@ class BBox:
             hull = ConvexHull(points[:, :2])
         except ValueError:
             warnings.warn("No points to fit bounding box.", stacklevel=2)
-            return self
+            return
         except QhullError:
             warnings.warn("Degenerate point set (1-D convex hull).", stacklevel=2)
-            return self
+            return
 
         # Candidate angles: one per hull edge
         edges_xy = np.diff(points[:, :2][hull.simplices], axis=1).reshape(-1, 2)
@@ -624,18 +624,10 @@ class BBox:
 
         self.corner_points = corners
         self.order_points()
-        return self
 
-    def fit_minimal(self) -> BBox:
-        raise NotImplementedError
-
-    # ── Metrics ───────────────────────────────────────────────────────────────
-
-    def iou(self, other: BBox) -> float:
-        """Compute 3D IoU with another BBox."""
-        from pystruct3d.metrics.bbox_iou import bbox_iou
-
-        return float(bbox_iou(self, other))
+    # TODO: implement fit_minimal — minimum bounding box (no Z-axis constraint)
+    # def fit_minimal(self) -> None:
+    #     raise NotImplementedError
 
     # ── Serialisation & I/O ───────────────────────────────────────────────────
 

@@ -199,6 +199,7 @@ class Visualizer:
         window_name: str = "pystruct3d",
         width: int = 2560,
         height: int = 1440,
+        trajectory: str | None = None,
     ) -> None:
         """Open an interactive Open3D viewer with all added geometries.
 
@@ -206,36 +207,22 @@ class Visualizer:
             window_name: title of the viewer window.
             width: window width in pixels. Defaults to 2560.
             height: window height in pixels. Defaults to 1440.
-        """
-        geoms = [g for _, g in self._geometries]
-        if not geoms:
-            return
-        o3d.visualization.draw_geometries(  # type: ignore
-            geoms, window_name=window_name, width=width, height=height
-        )
-
-    def show_with_animation(
-        self,
-        trajectory: str = "",
-        window_name: str = "pystruct3d",
-        width: int = 2560,
-        height: int = 1440,
-    ) -> None:
-        """Open an interactive viewer with a custom camera animation trajectory.
-
-        Args:
             trajectory: path to an Open3D view-trajectory JSON file.
-            window_name: title of the viewer window.
-            width: window width in pixels. Defaults to 2560.
-            height: window height in pixels. Defaults to 1440.
+                When provided, opens the animated camera viewer instead of
+                the standard one.
         """
         geoms = [g for _, g in self._geometries]
         if not geoms:
             return
-        o3d.visualization.draw_geometries_with_custom_animation(  # type: ignore
-            geoms,
-            window_name=window_name,
-            width=width,
-            height=height,
-            optional_view_trajectory_json_file=trajectory,
-        )
+        if trajectory is not None:
+            o3d.visualization.draw_geometries_with_custom_animation(  # type: ignore
+                geoms,
+                window_name=window_name,
+                width=width,
+                height=height,
+                optional_view_trajectory_json_file=trajectory,
+            )
+        else:
+            o3d.visualization.draw_geometries(  # type: ignore
+                geoms, window_name=window_name, width=width, height=height
+            )

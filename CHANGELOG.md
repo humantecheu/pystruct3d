@@ -3,6 +3,21 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- `BBox.fit_horizontal_aligned`: return type changed from `BBox` to `None` — consistent with all other mutating methods (`rotate`, `translate`, `expand`, …)
+- `visualization.Visualizer.show`: merged `show_with_animation` into `show(trajectory=None)` — eliminates duplicated `window_name`/`width`/`height` parameters
+- `metrics.voxelization_limits.set_iou` / `weighted_mean_iou`: dropped leading underscore — these functions are imported across module boundaries and are not private
+
+### Removed
+- `BBox.iou`: removed to break the geometry → metrics circular dependency; use `pystruct3d.metrics.bbox_iou` directly
+- `BBox.fit_minimal`: commented out with a TODO — `NotImplementedError` on a concrete class is a broken contract
+
+### Fixed
+- `io.e57.read_e57_file`: replaced `assert` with `raise ValueError` (matches `las.py`)
+- `io.cv4aec.bbox_from_cv4aec`: replaced silent `warnings.warn` + implicit zero-BBox return on unknown key with `raise ValueError`
+
 ## [0.13.0] - 2026-06-03
 
 ### Added
