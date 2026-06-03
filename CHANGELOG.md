@@ -3,7 +3,14 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.14.0] - 2026-06-03
+
+### Added
+- Logging via Python's standard `logging` module; `NullHandler` registered on the `pystruct3d` root logger — silent by default, opt-in via `logging.basicConfig` or handler configuration
+- `progress: bool = True` parameter on `read_las_file`, `read_e57_file`, `read_point_cloud`, and `transfer_labels` — pass `False` to suppress all tqdm output
+- `io.las.read_las_file`: rewritten to use `laspy.LasReader.chunk_iterator` for streaming reads; tqdm now shows genuine chunk-level progress on large LAS/LAZ files
+- `io.e57.read_e57_file`: tqdm wrapping the scan loop with per-scan point count shown as a postfix; per-scan point count and elapsed time emitted at `DEBUG` level
+- INFO-level logging (file name, point count, elapsed time) in `read_las_file`, `read_e57_file`, `_read_open3d_file`, and `transfer_labels`
 
 ### Changed
 - `BBox.fit_horizontal_aligned`: return type changed from `BBox` to `None` — consistent with all other mutating methods (`rotate`, `translate`, `expand`, …)

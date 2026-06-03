@@ -1,8 +1,15 @@
-import numpy as np
+from __future__ import annotations
+
+import logging
+import time
 from pathlib import Path
 
-from pystruct3d.io.las import read_las_file
+import numpy as np
+
 from pystruct3d.io.e57 import read_e57_file
+from pystruct3d.io.las import read_las_file
+
+logger = logging.getLogger(__name__)
 
 _LAS_EXTENSIONS = {".las", ".laz"}
 _E57_EXTENSIONS = {".e57"}
@@ -12,11 +19,23 @@ _OPEN3D_EXTENSIONS = {".pcd", ".ply", ".xyz", ".xyzn", ".xyzrgb", ".pts"}
 def _read_open3d_file(path: Path) -> tuple[np.ndarray, np.ndarray]:
     import open3d as o3d
 
+    t0 = time.perf_counter()
+    logger.info("Reading %s via open3d", path.name)
     pcd = o3d.io.read_point_cloud(str(path))
-    return np.asarray(pcd.points), np.asarray(pcd.colors)
+    xyz = np.asarray(pcd.points)
+    logger.info(
+        "Loaded %d points from %s in %.1fs",
+        len(xyz),
+        path.name,
+        time.perf_counter() - t0,
+    )
+    return xyz, np.asarray(pcd.colors)
 
 
-def read_point_cloud(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+def read_point_cloud(
+    path: Path | str,
+    progress: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
     """Read a point cloud file, routing to the correct reader by extension.
 
     Supported formats:
@@ -26,6 +45,8 @@ def read_point_cloud(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
 
     Args:
         path: path to the point cloud file.
+        progress: show a tqdm progress bar while loading (LAS and E57 only).
+            Defaults to True.
 
     Returns:
         Tuple of (xyz, rgb) arrays shaped (N, 3). RGB is normalised to [0, 1].
@@ -36,9 +57,9 @@ def read_point_cloud(path: Path | str) -> tuple[np.ndarray, np.ndarray]:
     ext = path.suffix.lower()
 
     if ext in _LAS_EXTENSIONS:
-        return read_las_file(path)
+        return read_las_file(path, progress=progress)
     if ext in _E57_EXTENSIONS:
-        return read_e57_file(path)
+        return read_e57_file(path, progress=progress)
     if ext in _OPEN3D_EXTENSIONS:
         return _read_open3d_file(path)
 

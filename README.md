@@ -36,6 +36,39 @@ pip install -e .
 
 > **Python 3.10–3.12 only.** Open3D does not yet ship wheels for Python 3.13+.
 
+## Logging and progress
+
+pystruct3d uses Python's standard `logging` module. A `NullHandler` is registered
+on the `pystruct3d` logger at import time, so **no output is produced by default**.
+To enable log output, configure a handler in your application:
+
+```python
+import logging
+logging.basicConfig(level=logging.INFO)   # INFO: file name, point count, elapsed time
+logging.basicConfig(level=logging.DEBUG)  # DEBUG: adds per-scan detail (E57)
+```
+
+Or to target only pystruct3d:
+
+```python
+logging.getLogger("pystruct3d").setLevel(logging.DEBUG)
+logging.getLogger("pystruct3d").addHandler(logging.StreamHandler())
+```
+
+Long-running I/O operations (`read_las_file`, `read_e57_file`, `read_point_cloud`)
+and `annotation.transfer_labels` accept a `progress` keyword argument (default
+`True`) that controls a [tqdm](https://github.com/tqdm/tqdm) progress bar:
+
+```python
+from pystruct3d.io import read_point_cloud
+
+xyz, rgb = read_point_cloud("scan.laz", progress=False)  # silent
+```
+
+Progress bars are real iterators for LAS/LAZ (chunked streaming via `laspy`) and
+scan-level for E57 (one step per scan, with point count shown as a postfix).
+Open3D-backed formats do not support sub-file progress.
+
 ## Bounding box naming convention
 
 To avoid confusion, there is a naming convention for the dimensions and points of the bounding box:

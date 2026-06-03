@@ -1,13 +1,28 @@
-import laspy
-import numpy as np
+from __future__ import annotations
+
+import logging
+import math
+import time
 from pathlib import Path
 
+import laspy
+import numpy as np
+from tqdm import tqdm
 
-def read_las_file(las_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
+logger = logging.getLogger(__name__)
+
+_CHUNK_SIZE = 10_000_000  # points per chunk for streaming reads
+
+
+def read_las_file(
+    las_path: Path | str,
+    progress: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
     """Read a LAS / LAZ file.
 
     Args:
         las_path: path to a .las or .laz file.
+        progress: show a tqdm progress bar while loading. Defaults to True.
 
     Returns:
         Tuple of (xyz, rgb) arrays shaped (N, 3). RGB is normalised to [0, 1].
@@ -18,19 +33,45 @@ def read_las_file(las_path: Path | str) -> tuple[np.ndarray, np.ndarray]:
     if las_path.suffix not in {".las", ".laz"}:
         raise ValueError(f"File format '{las_path.suffix}' must be '.las' or '.laz'.")
 
-    las_file = laspy.read(las_path)
+    t0 = time.perf_counter()
+    xyz_parts: list[np.ndarray] = []
+    rgb_parts: list[np.ndarray] = []
 
-    xyz = np.vstack((las_file.x, las_file.y, las_file.z)).transpose()
-    try:
-        rgb = np.vstack((las_file.red, las_file.green, las_file.blue)).transpose()
+    with laspy.open(las_path) as reader:
+        total = reader.header.point_count
+        has_rgb = "red" in reader.header.point_format.standard_dimension_names
+        n_chunks = math.ceil(total / _CHUNK_SIZE) if total > 0 else 1
+        logger.info("Reading %s: %d points, rgb=%s", las_path.name, total, has_rgb)
+
+        for chunk in tqdm(
+            reader.chunk_iterator(_CHUNK_SIZE),
+            total=n_chunks,
+            desc=las_path.name,
+            unit="chunk",
+            disable=not progress,
+        ):
+            xyz_parts.append(np.vstack((chunk.x, chunk.y, chunk.z)).T)
+            if has_rgb:
+                rgb_parts.append(np.vstack((chunk.red, chunk.green, chunk.blue)).T)
+
+    xyz = np.vstack(xyz_parts)
+
+    if has_rgb:
+        rgb = np.vstack(rgb_parts).astype(np.float64)
         if np.max(rgb) > np.iinfo(np.uint8).max:
-            rgb = rgb / np.iinfo(np.uint16).max
+            rgb /= np.iinfo(np.uint16).max
         elif np.max(rgb) > 1:
-            rgb = rgb / np.iinfo(np.uint8).max
-    except AttributeError:
-        rgb = np.zeros(xyz.shape)
+            rgb /= np.iinfo(np.uint8).max
+    else:
+        rgb = np.zeros(xyz.shape, dtype=np.float64)
 
-    return xyz, rgb.astype(np.float64)
+    logger.info(
+        "Loaded %d points from %s in %.1fs",
+        len(xyz),
+        las_path.name,
+        time.perf_counter() - t0,
+    )
+    return xyz, rgb
 
 
 def write_las_file(las_path: Path | str, xyz: np.ndarray, rgb: np.ndarray) -> None:
