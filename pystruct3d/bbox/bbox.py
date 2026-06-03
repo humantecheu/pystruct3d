@@ -87,46 +87,171 @@ class BBox:
             ordered_points = np.vstack((lower_points, upper_points))
             self.corner_points = ordered_points
 
-    def rotate(self, angle: float) -> None:
-        """Rotate counter-clockwise around the Z-axis through the box centre.
+    def _dimensions(self) -> tuple[float, float]:
+        """Return (length, width) in a single lower_edges() call."""
+        edge_lengths = np.linalg.norm(self.lower_edges(), axis=1)
+        return float(np.max(edge_lengths)), float(np.min(edge_lengths))
 
-        Args:
-            angle (float): angle in degrees
+    # ── Geometric properties ──────────────────────────────────────────────────
+
+    def lower_edges(self) -> np.ndarray:
+        """Return the four edge vectors of the lower (z-min) face.
+
+        Returns:
+            shape (4, 3) array of edge vectors, ordered to match the
+            counter-clockwise corner ordering of the lower face.
         """
-        center = np.mean(self.corner_points, axis=0)
-        self.corner_points -= center
-        c, s = np.cos(np.deg2rad(angle)), np.sin(np.deg2rad(angle))
-        xy = self.corner_points[:, :2].copy()
-        self.corner_points[:, 0] = c * xy[:, 0] - s * xy[:, 1]
-        self.corner_points[:, 1] = s * xy[:, 0] + c * xy[:, 1]
-        self.corner_points += center
-        self.order_points()
+        lower_points = self.corner_points[:4]
+        lower_points_rolled = np.roll(lower_points, 1, axis=0)
+        edges = lower_points_rolled - lower_points
 
-    def points_in_bbox_probability(
-        self,
-        points: np.ndarray,
-        probability_threshold: float = 0,
-        in_2d: bool = False,
-    ):
-        """Deprecated. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().
+        return edges
 
-        - Hard 3D containment  → points_in_bbox(points)
-        - 2D footprint test    → points_in_bbox_2d(points)
-        - Soft Gaussian        → points_in_bbox_soft(points, threshold)
+    def length(self) -> float:
+        """Return the length (longer horizontal dimension) of the bounding box.
+
+        ::
+
+              x---------------x
+             /|              /|
+            x---------------x |
+            | |             | |
+            | x-------------|-x
+            |/              |/
+            x---------------x
+              <--Length-->
+
+        Returns:
+            Length in the same units as the corner points.
         """
-        warnings.warn(
-            "points_in_bbox_probability is deprecated. "
-            "Use points_in_bbox() for hard 3D containment, "
-            "points_in_bbox_2d() for 2D footprint testing, or "
-            "points_in_bbox_soft(points, threshold) for Gaussian soft membership.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        if in_2d:
-            return self.points_in_bbox_2d(points)
-        if probability_threshold > 0:
-            return self.points_in_bbox_soft(points, probability_threshold)
-        return self.points_in_bbox(points)
+        return self._dimensions()[0]
+
+    def width(self) -> float:
+        """Return the width (shorter horizontal dimension) of the bounding box.
+
+        ::
+
+                 x-------------------x
+                /                   /|
+               /                   / |
+              /                   /  |
+             x-------------------x   |
+             |   |               |   |
+             |   x---------------|---x   w
+             |  /                |  /   i
+             | /                 | /   d
+             |/                  |/   t
+             x-------------------x   h
+
+        Returns:
+            Width in the same units as the corner points.
+        """
+        return self._dimensions()[1]
+
+    def height(self) -> float:
+        """Return the height of the bounding box.
+
+        Returns:
+            Height in the same units as the corner points.
+        """
+        zs = self.corner_points[:, 2]
+        return float(np.max(zs) - np.min(zs))
+
+    def volume(self) -> float:
+        """Return the volume of the bounding box."""
+        length, width = self._dimensions()
+        return length * width * self.height()
+
+    def angle(self) -> float:
+        """Returns the counter-clockwise angle of the bounding box to the x-axis.
+
+        Returns:
+            float: angle in degrees
+        """
+        edges = self.lower_edges()
+        lengths = np.linalg.norm(edges, axis=1)
+        longest_idx = np.argmax(lengths)
+
+        rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
+        angle = np.rad2deg(rad_angle)
+        # force angle between 0 and 180
+        angle = (angle + 180) % 180
+        return angle
+
+    def dir_vector_norm(self) -> np.ndarray:
+        """Return the unit vector along the length edge ([0]→[1]).
+
+        Returns:
+            shape (3,) unit vector.
+        """
+        direction_vec = self.corner_points[1] - self.corner_points[0]
+        dir_norm = direction_vec / np.linalg.norm(direction_vec)
+        return dir_norm
+
+    def get_endpts(self) -> np.ndarray:
+        """Return the two midpoints of the length-direction ends of the box.
+
+        Returns:
+            np.ndarray: endpoints, shape (2, 3)
+        """
+        edges = self.lower_edges()
+        lengths = np.linalg.norm(edges, axis=1)
+        min_idx = np.argmin(lengths)
+
+        lower_points = self.corner_points[:4]
+        if min_idx % 2 == 0:
+            pt_1 = (lower_points[1, :] + lower_points[2, :]) / 2
+            pt_2 = (lower_points[3, :] + lower_points[0, :]) / 2
+        else:
+            pt_1 = (lower_points[0, :] + lower_points[1, :]) / 2
+            pt_2 = (lower_points[2, :] + lower_points[3, :]) / 2
+
+        endpts = np.vstack((pt_1, pt_2))
+
+        return endpts
+
+    def get_center_plane(self) -> np.ndarray:
+        """Return the plane equation of the centre plane along the width axis.
+
+        The centre plane bisects the bounding box perpendicular to the width
+        direction (i.e., it runs through the middle of the box along its length
+        and height axes).
+
+        Returns:
+            shape (4,) array ``[a, b, c, d]`` representing ``ax + by + cz + d = 0``,
+            where ``[a, b, c]`` is the unit normal in the width direction.
+        """
+        width_vector = self.corner_points[3] - self.corner_points[0]
+        plane_normal = width_vector / np.linalg.norm(width_vector)
+
+        plane_point = self.corner_points[0] + 0.5 * width_vector
+
+        d = np.negative(np.sum(plane_normal * plane_point))
+        plane_equation = np.append(plane_normal, d)
+        return plane_equation
+
+    def get_side_planes(self) -> tuple[np.ndarray, np.ndarray]:
+        """Return the plane equations of the two side faces along the width axis.
+
+        Both planes share the same unit normal (the width direction); they
+        differ only in their offset term ``d``.
+
+        Returns:
+            plane1: shape (4,) ``[a, b, c, d]`` for the face at corner[0].
+            plane2: shape (4,) ``[a, b, c, d]`` for the face at corner[3].
+        """
+        width_vector = self.corner_points[3] - self.corner_points[0]
+        plane_normal = width_vector / np.linalg.norm(width_vector)
+
+        d1 = np.negative(np.sum(plane_normal * self.corner_points[0]))
+        d2 = np.negative(np.sum(plane_normal * self.corner_points[3]))
+
+        plane_equation1 = np.append(plane_normal, d1)
+        plane_equation2 = np.append(plane_normal, d2)
+
+        return plane_equation1, plane_equation2
+
+    # ── Containment ───────────────────────────────────────────────────────────
 
     def points_in_bbox(self, points: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Find the points inside the bounding box.
@@ -225,6 +350,23 @@ class BBox:
         indices = np.flatnonzero(pdf > threshold)
         return points[indices], indices, pdf
 
+    # ── Transforms ────────────────────────────────────────────────────────────
+
+    def rotate(self, angle: float) -> None:
+        """Rotate counter-clockwise around the Z-axis through the box centre.
+
+        Args:
+            angle (float): angle in degrees
+        """
+        center = np.mean(self.corner_points, axis=0)
+        self.corner_points -= center
+        c, s = np.cos(np.deg2rad(angle)), np.sin(np.deg2rad(angle))
+        xy = self.corner_points[:, :2].copy()
+        self.corner_points[:, 0] = c * xy[:, 0] - s * xy[:, 1]
+        self.corner_points[:, 1] = s * xy[:, 0] + c * xy[:, 1]
+        self.corner_points += center
+        self.order_points()
+
     def translate(self, translation_vector: np.ndarray) -> None:  # shape (3, )
         """Translate the bounding box along a given vector.
 
@@ -319,106 +461,18 @@ class BBox:
             self.corner_points[7] - length_offset + width_offset + height_offset
         )
 
-    def lower_edges(self) -> np.ndarray:
-        """Return the four edge vectors of the lower (z-min) face.
-
-        Returns:
-            shape (4, 3) array of edge vectors, ordered to match the
-            counter-clockwise corner ordering of the lower face.
-        """
-        lower_points = self.corner_points[:4]
-        lower_points_rolled = np.roll(lower_points, 1, axis=0)
-        edges = lower_points_rolled - lower_points
-
-        return edges
-
-    def _dimensions(self) -> tuple[float, float]:
-        """Return (length, width) in a single lower_edges() call."""
-        edge_lengths = np.linalg.norm(self.lower_edges(), axis=1)
-        return float(np.max(edge_lengths)), float(np.min(edge_lengths))
-
-    def length(self) -> float:
-        """Return the length (longer horizontal dimension) of the bounding box.
-
-        ::
-
-              x---------------x
-             /|              /|
-            x---------------x |
-            | |             | |
-            | x-------------|-x
-            |/              |/
-            x---------------x
-              <--Length-->
-
-        Returns:
-            Length in the same units as the corner points.
-        """
-        return self._dimensions()[0]
-
-    def width(self) -> float:
-        """Return the width (shorter horizontal dimension) of the bounding box.
-
-        ::
-
-                 x-------------------x
-                /                   /|
-               /                   / |
-              /                   /  |
-             x-------------------x   |
-             |   |               |   |
-             |   x---------------|---x   w
-             |  /                |  /   i
-             | /                 | /   d
-             |/                  |/   t
-             x-------------------x   h
-
-        Returns:
-            Width in the same units as the corner points.
-        """
-        return self._dimensions()[1]
-
-    def height(self):
-        """Returns the height of the bounding box
-
-        Returns:
-            float: height
-        """
-
-        zs = self.corner_points[:, 2]
-
-        height = np.max(zs) - np.min(zs)
-
-        return height
-
-    def angle(self) -> float:
-        """Returns the counter-clockwise angle of the bounding box to the x-axis.
-
-        Returns:
-            float: angle in degrees
-        """
-        edges = self.lower_edges()
-        lengths = np.linalg.norm(edges, axis=1)
-        longest_idx = np.argmax(lengths)
-
-        rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
-        angle = np.rad2deg(rad_angle)
-        # force angle between 0 and 180
-        # if angle != 180:
-        #     angle = (angle + 180) % 180
-        angle = (angle + 180) % 180
-        # angle = (angle + 360) % 360
-        return angle
-
-    def dir_vector_norm(self) -> np.ndarray:
-        """Return the unit vector along the length edge ([0]→[1]).
-
-        Returns:
-            shape (3,) unit vector.
-        """
-        direction_vec = self.corner_points[1] - self.corner_points[0]
-        dir_norm = direction_vec / np.linalg.norm(direction_vec)
-        return dir_norm
+    def axis_align(self) -> None:
+        """Axis-align the bounding box by snapping to the nearest 90° boundary."""
+        # KNOWN LIMITATION: snaps to nearest 45° boundary, not always the x-axis
+        ang = self.angle()
+        if ang <= 45:
+            self.rotate(-ang)
+        elif ang <= 90:
+            self.rotate(90 - ang)
+        elif ang <= 135:
+            self.rotate(-ang + 90)
+        else:
+            self.rotate(180 - ang)
 
     def project_into_parent(self, parent_bbox: BBox) -> None:
         """Project bounding box into parent bounding box e.g., door bounding box
@@ -483,204 +537,10 @@ class BBox:
 
         return other_box
 
-    def axis_align(self) -> None:
-        """Axis-align the bounding box by snapping to the nearest 90° boundary."""
-        # KNOWN LIMITATION: snaps to nearest 45° boundary, not always the x-axis
-        ang = self.angle()
-        if ang <= 45:
-            self.rotate(-ang)
-        elif ang <= 90:
-            self.rotate(90 - ang)
-        elif ang <= 135:
-            self.rotate(-ang + 90)
-        else:
-            self.rotate(180 - ang)
+    # ── Fitting ───────────────────────────────────────────────────────────────
 
-    def as_np_array(self) -> np.ndarray:
-        """Return the corner points as a numpy array.
-
-        Returns:
-            shape (8, 3) array of corner points (same object as ``self.corner_points``).
-        """
-        return self.corner_points
-
-    def to_o3d(self) -> o3d.geometry.OrientedBoundingBox:
-        """Convert to an Open3D OrientedBoundingBox.
-
-        The three OBB axes are derived from edges [0]→[1] (length),
-        [0]→[3] (width), and [0]→[4] (height).
-        """
-        center = np.mean(self.corner_points, axis=0)
-        l_vec = self.corner_points[1] - self.corner_points[0]
-        w_vec = self.corner_points[3] - self.corner_points[0]
-        h_vec = self.corner_points[4] - self.corner_points[0]
-        length = np.linalg.norm(l_vec)
-        width = np.linalg.norm(w_vec)
-        height = np.linalg.norm(h_vec)
-        R = np.column_stack([l_vec / length, w_vec / width, h_vec / height])
-        obb = o3d.geometry.OrientedBoundingBox()
-        obb.center = center
-        obb.R = R
-        obb.extent = np.array([length, width, height])
-        return obb
-
-    @classmethod
-    def from_o3d(cls, obb: o3d.geometry.OrientedBoundingBox) -> BBox:
-        """Construct a BBox from an Open3D OrientedBoundingBox."""
-        corners = np.asarray(obb.get_box_points())
-        return cls(corners)
-
-    @classmethod
-    def from_params(
-        cls,
-        position: np.ndarray,
-        lwh: tuple[float, float, float] | np.ndarray,
-        yaw: float = 0.0,
-        *,
-        origin: str = "center",
-    ) -> BBox:
-        """Construct from parametric position, dimensions, and yaw.
-
-        Args:
-            position: (3,) xyz coordinates. Interpreted as the box centre when
-                ``origin="center"`` (default), or as the minimum corner
-                (bottom-left-front in the pre-rotation frame) when
-                ``origin="corner"``.
-            lwh: (length, width, height) — length is the longer horizontal dim.
-            yaw: rotation around the Z-axis in radians (CCW). Defaults to 0.0.
-            origin: ``"center"`` or ``"corner"``. Defaults to ``"center"``.
-
-        Returns:
-            BBox with the described geometry.
-
-        Raises:
-            ValueError: if ``origin`` is not ``"center"`` or ``"corner"``.
-        """
-        length, w, h = lwh
-        hl, hw, hh = length / 2, w / 2, h / 2
-
-        if origin == "center":
-            center = np.asarray(position, dtype=float)
-        elif origin == "corner":
-            center = np.asarray(position, dtype=float) + np.array([hl, hw, hh])
-        else:
-            raise ValueError(f"origin must be 'center' or 'corner', got {origin!r}")
-
-        corners = np.array(
-            [
-                [-hl, -hw, -hh],
-                [hl, -hw, -hh],
-                [hl, hw, -hh],
-                [-hl, hw, -hh],
-                [-hl, -hw, hh],
-                [hl, -hw, hh],
-                [hl, hw, hh],
-                [-hl, hw, hh],
-            ],
-            dtype=float,
-        )
-        c, s = np.cos(yaw), np.sin(yaw)
-        xy = corners[:, :2].copy()
-        corners[:, 0] = c * xy[:, 0] - s * xy[:, 1]
-        corners[:, 1] = s * xy[:, 0] + c * xy[:, 1]
-        corners += center
-        return cls(corners)
-
-    def to_dict(self) -> dict:
-        """Serialise corner points to a JSON-compatible dict."""
-        return {"corner_points": self.corner_points.tolist()}
-
-    @classmethod
-    def from_dict(cls, d: dict) -> BBox:
-        """Reconstruct from a dict produced by ``to_dict()``."""
-        return cls(np.asarray(d["corner_points"]))
-
-    def save(self, path: str) -> None:
-        """Save corner points to a ``.npy`` file."""
-        np.save(path, self.corner_points)
-
-    @classmethod
-    def load(cls, path: str) -> BBox:
-        """Load corner points from a ``.npy`` file written by ``save()``."""
-        return cls(np.load(path))
-
-    def iou(self, other: BBox) -> float:
-        """Compute 3D IoU with another BBox."""
-        from pystruct3d.metrics.bbox_iou import bbox_iou
-
-        return float(bbox_iou(self, other))
-
-    def get_endpts(self):
-        """Returns the endpoints
-
-        Returns:
-            np.ndarray: endpoints, shape (2, 3)
-        """
-
-        edges = self.lower_edges()
-        lengths = np.linalg.norm(edges, axis=1)
-        min_idx = np.argmin(lengths)
-
-        lower_points = self.corner_points[:4]
-        if min_idx % 2 == 0:
-            pt_1 = (lower_points[1, :] + lower_points[2, :]) / 2
-            pt_2 = (lower_points[3, :] + lower_points[0, :]) / 2
-        else:
-            pt_1 = (lower_points[0, :] + lower_points[1, :]) / 2
-            pt_2 = (lower_points[2, :] + lower_points[3, :]) / 2
-
-        endpts = np.vstack((pt_1, pt_2))
-
-        return endpts
-
-    def get_center_plane(self) -> np.ndarray:
-        """Return the plane equation of the centre plane along the width axis.
-
-        The centre plane bisects the bounding box perpendicular to the width
-        direction (i.e., it runs through the middle of the box along its length
-        and height axes).
-
-        Returns:
-            shape (4,) array ``[a, b, c, d]`` representing ``ax + by + cz + d = 0``,
-            where ``[a, b, c]`` is the unit normal in the width direction.
-        """
-        width_vector = self.corner_points[3] - self.corner_points[0]
-        plane_normal = width_vector / np.linalg.norm(width_vector)
-
-        plane_point = self.corner_points[0] + 0.5 * width_vector
-
-        d = np.negative(np.sum(plane_normal * plane_point))
-        plane_equation = np.append(plane_normal, d)
-        return plane_equation
-
-    def get_side_planes(self) -> tuple[np.ndarray, np.ndarray]:
-        """Return the plane equations of the two side faces along the width axis.
-
-        Both planes share the same unit normal (the width direction); they
-        differ only in their offset term ``d``.
-
-        Returns:
-            plane1: shape (4,) ``[a, b, c, d]`` for the face at corner[0].
-            plane2: shape (4,) ``[a, b, c, d]`` for the face at corner[3].
-        """
-        width_vector = self.corner_points[3] - self.corner_points[0]
-        plane_normal = width_vector / np.linalg.norm(width_vector)
-
-        d1 = np.negative(np.sum(plane_normal * self.corner_points[0]))
-        d2 = np.negative(np.sum(plane_normal * self.corner_points[3]))
-
-        plane_equation1 = np.append(plane_normal, d1)
-        plane_equation2 = np.append(plane_normal, d2)
-
-        return plane_equation1, plane_equation2
-
-    def volume(self) -> float:
-        """Return the volume of the bounding box."""
-        length, width = self._dimensions()
-        return length * width * self.height()
-
-    def fit_axis_aligned(self, points: np.ndarray):
-        """fits an axis aligned bounding box to a set of points
+    def fit_axis_aligned(self, points: np.ndarray) -> None:
+        """Fit an axis-aligned bounding box to a set of points.
 
         Args:
             points (np.ndarray): points, shape (n, 3)
@@ -769,67 +629,153 @@ class BBox:
     def fit_minimal(self) -> BBox:
         raise NotImplementedError
 
-    def bbox_from_verts(
-        self,
-        verts: np.ndarray,  # n,
-        force_cuboid: bool = True,
-    ) -> BBox:
-        """Function to get the bounding box from vertices. Vertices are the
-        points of an IFC geometry shape as a np.ndarray of shape n, . The vertices
-        can be obtained from the IFC geometry using IfcOpenShell as follows:
-        settings = ifcopenshell.geom.settings()
-        settings.set(settings.USE_WORLD_COORDS, True)
-        shape = ifcopenshell.geom.create_shape(settings, element)
-        verts = np.asarray(shape.geometry.verts)
-        where element is an IfcElement e.g., IfcWall
-        Note, that you have to provide the element using IfcOpenShell e.g.,
-        filtered from an IFC file.
+    # ── Metrics ───────────────────────────────────────────────────────────────
 
-        Args:
-            verts (np.ndarray): input vertices of shape n,
+    def iou(self, other: BBox) -> float:
+        """Compute 3D IoU with another BBox."""
+        from pystruct3d.metrics.bbox_iou import bbox_iou
+
+        return float(bbox_iou(self, other))
+
+    # ── Serialisation & I/O ───────────────────────────────────────────────────
+
+    def as_np_array(self) -> np.ndarray:
+        """Return the corner points as a numpy array.
 
         Returns:
-            bounding box (np.ndarray): bouding box of shape (8, 3)
+            shape (8, 3) array of corner points (same object as ``self.corner_points``).
         """
+        return self.corner_points
 
-        # reshape to n, 3
-        orig_shape = verts.shape[0]
-        verts = verts.reshape((int(orig_shape / 3), 3))
-        corner_pts = verts[verts[:, 2].argsort()]
-        # vertices from IFC may result in arbitrary non-cuboid bounding boxes
-        if force_cuboid:
-            # fit a bounding box to enforce cuboid-shaped bounding box
-            self.fit_horizontal_aligned(verts)
+    def to_o3d(self) -> o3d.geometry.OrientedBoundingBox:
+        """Convert to an Open3D OrientedBoundingBox.
+
+        The three OBB axes are derived from edges [0]→[1] (length),
+        [0]→[3] (width), and [0]→[4] (height).
+        """
+        center = np.mean(self.corner_points, axis=0)
+        l_vec = self.corner_points[1] - self.corner_points[0]
+        w_vec = self.corner_points[3] - self.corner_points[0]
+        h_vec = self.corner_points[4] - self.corner_points[0]
+        length = np.linalg.norm(l_vec)
+        width = np.linalg.norm(w_vec)
+        height = np.linalg.norm(h_vec)
+        R = np.column_stack([l_vec / length, w_vec / width, h_vec / height])
+        obb = o3d.geometry.OrientedBoundingBox()
+        obb.center = center
+        obb.R = R
+        obb.extent = np.array([length, width, height])
+        return obb
+
+    def to_dict(self) -> dict:
+        """Serialise corner points to a JSON-compatible dict."""
+        return {"corner_points": self.corner_points.tolist()}
+
+    def save(self, path: str) -> None:
+        """Save corner points to a ``.npy`` file."""
+        np.save(path, self.corner_points)
+
+    # ── Classmethods (factories) ──────────────────────────────────────────────
+
+    @classmethod
+    def from_params(
+        cls,
+        position: np.ndarray,
+        lwh: tuple[float, float, float] | np.ndarray,
+        yaw: float = 0.0,
+        *,
+        origin: str = "center",
+    ) -> BBox:
+        """Construct from parametric position, dimensions, and yaw.
+
+        Args:
+            position: (3,) xyz coordinates. Interpreted as the box centre when
+                ``origin="center"`` (default), or as the minimum corner
+                (bottom-left-front in the pre-rotation frame) when
+                ``origin="corner"``.
+            lwh: (length, width, height) — length is the longer horizontal dim.
+            yaw: rotation around the Z-axis in radians (CCW). Defaults to 0.0.
+            origin: ``"center"`` or ``"corner"``. Defaults to ``"center"``.
+
+        Returns:
+            BBox with the described geometry.
+
+        Raises:
+            ValueError: if ``origin`` is not ``"center"`` or ``"corner"``.
+        """
+        length, w, h = lwh
+        hl, hw, hh = length / 2, w / 2, h / 2
+
+        if origin == "center":
+            center = np.asarray(position, dtype=float)
+        elif origin == "corner":
+            center = np.asarray(position, dtype=float) + np.array([hl, hw, hh])
         else:
-            # if non-cuboid shape is acceptable, find extreme and use as corner points
-            # min, max and mean of XYZ
-            min_x = np.amin(corner_pts[:, 0])
-            max_x = np.amax(corner_pts[:, 0])
-            mean_x = (min_x + max_x) / 2
+            raise ValueError(f"origin must be 'center' or 'corner', got {origin!r}")
 
-            min_y = np.amin(corner_pts[:, 1])
-            max_y = np.amax(corner_pts[:, 1])
-            mean_y = (min_y + max_y) / 2
+        corners = np.array(
+            [
+                [-hl, -hw, -hh],
+                [hl, -hw, -hh],
+                [hl, hw, -hh],
+                [-hl, hw, -hh],
+                [-hl, -hw, hh],
+                [hl, -hw, hh],
+                [hl, hw, hh],
+                [-hl, hw, hh],
+            ],
+            dtype=float,
+        )
+        c, s = np.cos(yaw), np.sin(yaw)
+        xy = corners[:, :2].copy()
+        corners[:, 0] = c * xy[:, 0] - s * xy[:, 1]
+        corners[:, 1] = s * xy[:, 0] + c * xy[:, 1]
+        corners += center
+        return cls(corners)
 
-            min_z = np.amin(corner_pts[:, 2])
-            max_z = np.amax(corner_pts[:, 2])
-            mean_z = (min_z + max_z) / 2
+    @classmethod
+    def from_o3d(cls, obb: o3d.geometry.OrientedBoundingBox) -> BBox:
+        """Construct a BBox from an Open3D OrientedBoundingBox."""
+        corners = np.asarray(obb.get_box_points())
+        return cls(corners)
 
-            # find centroid
-            centrd = np.asarray([mean_x, mean_y, mean_z])
+    @classmethod
+    def from_dict(cls, d: dict) -> BBox:
+        """Reconstruct from a dict produced by ``to_dict()``."""
+        return cls(np.asarray(d["corner_points"]))
 
-            # find 8 points furthest away from centroid
-            diffs = np.subtract(corner_pts, centrd)
-            dists = np.linalg.norm(diffs, axis=1)
+    @classmethod
+    def load(cls, path: str) -> BBox:
+        """Load corner points from a ``.npy`` file written by ``save()``."""
+        return cls(np.load(path))
 
-            # take 8 points with maximum distances to centroid
-            corner_pts_idx = (-dists).argsort()[:8]
-            corner_pts = corner_pts[corner_pts_idx]
+    # ── Deprecated ────────────────────────────────────────────────────────────
 
-            self.corner_points = corner_pts
-            self.order_points()
+    def points_in_bbox_probability(
+        self,
+        points: np.ndarray,
+        probability_threshold: float = 0,
+        in_2d: bool = False,
+    ):
+        """Deprecated. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().
 
-        return self
+        - Hard 3D containment  → points_in_bbox(points)
+        - 2D footprint test    → points_in_bbox_2d(points)
+        - Soft Gaussian        → points_in_bbox_soft(points, threshold)
+        """
+        warnings.warn(
+            "points_in_bbox_probability is deprecated. "
+            "Use points_in_bbox() for hard 3D containment, "
+            "points_in_bbox_2d() for 2D footprint testing, or "
+            "points_in_bbox_soft(points, threshold) for Gaussian soft membership.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if in_2d:
+            return self.points_in_bbox_2d(points)
+        if probability_threshold > 0:
+            return self.points_in_bbox_soft(points, probability_threshold)
+        return self.points_in_bbox(points)
 
     def from_cv4aec(self, cv4aec_dict: dict):
         """Create bounding boxes from cv4aec parameters.
