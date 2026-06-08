@@ -3,6 +3,15 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.1] - 2026-06-08
+
+### Fixed
+- CI and docs workflows now use `fetch-depth: 0` so setuptools-scm can read tags and report the correct version (was showing `0.1.dev1+g…`).
+- CI trigger restricted to `main` branch and PRs only — tag pushes no longer spawn duplicate runs.
+
+### Added
+- Docs badge in README linking to GitHub Pages.
+
 ## [0.15.0] - 2026-06-08
 
 ### Added

@@ -17,6 +17,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v5
       - run: |
           VERSION=$(uv run python -c "import pystruct3d; print(pystruct3d.__version__)")
