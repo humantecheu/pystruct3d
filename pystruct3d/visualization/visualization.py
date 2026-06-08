@@ -197,16 +197,16 @@ class Visualizer:
     def show(
         self,
         window_name: str = "pystruct3d",
-        width: int = 2560,
-        height: int = 1440,
+        width: int = 1280,
+        height: int = 720,
         trajectory: str | None = None,
     ) -> None:
         """Open an interactive Open3D viewer with all added geometries.
 
         Args:
             window_name: title of the viewer window.
-            width: window width in pixels. Defaults to 2560.
-            height: window height in pixels. Defaults to 1440.
+            width: window width in pixels. Defaults to 1280.
+            height: window height in pixels. Defaults to 720.
             trajectory: path to an Open3D view-trajectory JSON file.
                 When provided, opens the animated camera viewer instead of
                 the standard one.

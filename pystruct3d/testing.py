@@ -26,7 +26,8 @@ def generate_bounding_boxes(
     """
     if rng is None:
         rng = np.random.default_rng(0)
-    assert n_boxes > 1, "n_boxes must be greater than 1"
+    if n_boxes <= 1:
+        raise ValueError("n_boxes must be greater than 1")
     x_range = (0, n_boxes)
     y_range = (0, n_boxes)
     z_range = (0.0, 2.0 * float(np.max(h_range)))

@@ -1,0 +1,28 @@
+name: Deploy docs
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: |
+          VERSION=$(uv run python -c "import pystruct3d; print(pystruct3d.__version__)")
+          uv run pdoc --docformat google --footer-text "pystruct3d $VERSION" --output-dir _site pystruct3d
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

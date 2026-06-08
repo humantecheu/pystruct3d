@@ -34,7 +34,8 @@ def pointcloud_limits(pointcloud: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         min_values: floor of per-axis minimum, shape (3,).
         max_values: ceil of per-axis maximum, shape (3,).
     """
-    assert pointcloud.shape[1] == 3, "pointcloud must be of shape nx3"
+    if pointcloud.shape[1] != 3:
+        raise ValueError(f"pointcloud must have shape (n, 3), got {pointcloud.shape}")
     min_values = np.floor(np.min(pointcloud, axis=0)).astype(int)
     max_values = np.ceil(np.max(pointcloud, axis=0)).astype(int)
     return min_values, max_values

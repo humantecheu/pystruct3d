@@ -507,35 +507,25 @@ class BBox:
         self.corner_points[[2, 3, 6, 7], :] += nv * parent_bbox.width()
         self.order_points()
 
-    def split_bounding_box(self, offset: float = 0.2) -> BBox:
-        """Splits the bounding box into two. Modifies self, returns the other box
+    def split(self, offset: float = 0.2) -> tuple[BBox, BBox]:
+        """Split into two halves along the width axis.
+
+        Args:
+            offset: gap between the two halves in metres. Defaults to 0.2.
 
         Returns:
-            BBox: other bounding box
+            Tuple of (first_half, second_half) BBox objects. Self is not modified.
         """
-        # get lower edges
         edges = self.lower_edges()
         half_edges = edges / 2
-
-        # calculate the transformation matrix
         transform = half_edges[1] + offset * half_edges[1] / np.linalg.norm(
             half_edges[1]
         )
-
-        transform_mat = np.zeros((8, 3))
-        transform_mat[[1, 2, 5, 6]] = transform
-        # transform self
-        self.corner_points += transform_mat
-
-        other_transform_mat = np.zeros((8, 3))
-        other_transform_mat[::] = transform
-
-        # add other box and transform
-        other_points = np.copy(self.corner_points)
-        other_points -= other_transform_mat
-        other_box = BBox(other_points)
-
-        return other_box
+        first_pts = np.copy(self.corner_points)
+        first_pts[[1, 2, 5, 6]] += transform
+        second_pts = np.copy(self.corner_points)
+        second_pts[[0, 3, 4, 7]] -= transform
+        return BBox(first_pts), BBox(second_pts)
 
     # ── Fitting ───────────────────────────────────────────────────────────────
 
@@ -748,8 +738,10 @@ class BBox:
         points: np.ndarray,
         probability_threshold: float = 0,
         in_2d: bool = False,
-    ):
-        """Deprecated. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().
+    ) -> tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Deprecated since 0.4.1. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().
+
+        .. deprecated:: 0.4.1
 
         - Hard 3D containment  → points_in_bbox(points)
         - 2D footprint test    → points_in_bbox_2d(points)
@@ -769,10 +761,10 @@ class BBox:
             return self.points_in_bbox_soft(points, probability_threshold)
         return self.points_in_bbox(points)
 
-    def from_cv4aec(self, cv4aec_dict: dict):
+    def from_cv4aec(self, cv4aec_dict: dict) -> None:
         """Create bounding boxes from cv4aec parameters.
 
-        .. deprecated::
+        .. deprecated:: 0.6.0
             Use :func:`pystruct3d.io.cv4aec.bbox_from_cv4aec` instead.
 
         Args:
@@ -788,10 +780,10 @@ class BBox:
         box = bbox_from_cv4aec(cv4aec_dict)
         self.corner_points = box.corner_points
 
-    def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0"):
+    def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0") -> dict:
         """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
 
-        .. deprecated::
+        .. deprecated:: 0.6.0
             Use :func:`pystruct3d.io.cv4aec.bbox_to_cv4aec` instead.
 
         Args:

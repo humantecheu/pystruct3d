@@ -3,6 +3,25 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.0] - 2026-06-08
+
+### Added
+- GitHub Actions CI workflow (ruff, ty, pytest on every push/PR).
+- GitHub Actions docs workflow: builds pdoc on push to main and deploys to GitHub Pages.
+- `pdoc` pre-commit hook: verifies docs build on every commit (no HTML committed).
+
+### Changed
+- `BBox.split_bounding_box()` renamed to `BBox.split()` and made a pure function — returns
+  `tuple[BBox, BBox]` (first half, second half) without modifying self.
+- `BBox.points_in_bbox_probability()`: return type narrowed to
+  `tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray]`.
+- `BBox.from_cv4aec()` / `BBox.to_cv4aec()`: explicit `-> None` / `-> dict` return type added.
+- `io.readers._read_open3d_file`: one-line docstring added.
+
+### Fixed
+- `testing.generate_bounding_boxes`: replaced `assert n_boxes > 1` with `raise ValueError`.
+- `metrics.voxelization_limits.pointcloud_limits`: replaced `assert shape[1] == 3` with `raise ValueError`.
+
 ## [0.14.1] - 2026-06-03
 
 ### Fixed

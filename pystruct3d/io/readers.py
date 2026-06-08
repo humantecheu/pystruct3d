@@ -17,6 +17,7 @@ _OPEN3D_EXTENSIONS = {".pcd", ".ply", ".xyz", ".xyzn", ".xyzrgb", ".pts"}
 
 
 def _read_open3d_file(path: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Read a point cloud via open3d (PCD, PLY, XYZ, PTS, …)."""
     import open3d as o3d
 
     t0 = time.perf_counter()

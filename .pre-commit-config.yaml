@@ -17,3 +17,9 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: pdoc-check
+        name: pdoc-check
+        entry: uv run pdoc --docformat google --output-dir /tmp/pystruct3d-docs-check pystruct3d
+        language: system
+        pass_filenames: false
+        types: [python]
