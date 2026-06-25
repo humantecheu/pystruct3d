@@ -7,11 +7,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - SPDX license headers (`# SPDX-License-Identifier: MIT / # Copyright (c) 2023 HumanTech`) added to all Python source files.
+- `pre-commit` added as an explicit dev dependency.
 
 ### Changed
 - Lint config expanded from a selective rule list to `select = ["ALL"]` with an explicit, documented ignore list — broader coverage with every exclusion justified in-place.
 - Removed stale ignores `PLR0124`, `PLR0912`, `PLR0915` — confirmed zero violations in the codebase.
 - Added `per-file-ignores`: `scripts/*` suppresses T201/PLW0108/C901/EXE001; `tests/*` suppresses S101.
+- README Python badge narrowed from `3.10+` to `3.10–3.12` to match `requires-python`.
 
 ### Fixed
 - Import order corrected in 7 modules (`I001`).
@@ -19,6 +21,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `voxel_iou.main` and `scripts/visualize_bbox`: replaced legacy `np.random.uniform` with `np.random.default_rng()` (`NPY002`).
 - `scripts/evaluate_cv4aec._load`: `open()` replaced with `Path.open()` (`PTH123`).
 - `tests/test_bbox_iou`: compound `assert … and …` split into two independent assertions (`PT018`).
+- Docs workflow: added `overwrite: true` to `upload-pages-artifact` to prevent stale artifact conflicts.
 
 ## [0.15.1] - 2026-06-08
 

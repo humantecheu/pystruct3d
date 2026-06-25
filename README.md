@@ -1,6 +1,6 @@
 # PyStruct3D
 
-![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
+![Python 3.10–3.12](https://img.shields.io/badge/python-3.10--3.12-blue.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![arXiv](https://img.shields.io/badge/arXiv-2604.24311-b31b1b.svg)](https://arxiv.org/abs/2604.24311)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://humantecheu.github.io/pystruct3d/)
@@ -45,7 +45,8 @@ To enable log output, configure a handler in your application:
 
 ```python
 import logging
-logging.basicConfig(level=logging.INFO)   # INFO: file name, point count, elapsed time
+
+logging.basicConfig(level=logging.INFO)  # INFO: file name, point count, elapsed time
 logging.basicConfig(level=logging.DEBUG)  # DEBUG: adds per-scan detail (E57)
 ```
 
