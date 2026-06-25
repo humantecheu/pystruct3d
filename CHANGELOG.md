@@ -3,6 +3,17 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.17.0] - 2026-06-25
+
+### Changed
+- Enabled `ANN` (type-annotation) lint rules for library code; suppressed in `tests/*` and `scripts/*` via per-file-ignores.
+- Annotated `BBox.to_cv4aec` parameters (`output_style`, `element_id`, `host_id`) as `str`.
+- Annotated deprecated `Visualization.__init__` (`*args: object`, `**kwargs: object`, `-> None`).
+- Enabled `PGH003` (blanket `# type: ignore` ban): replaced with `# ty: ignore[unresolved-attribute]` in `visualization.py`; added explicit `import open3d.visualization` so ty resolves the submodule.
+- Enabled `INP001`: added `scripts/__init__.py` and `tests/__init__.py`.
+- Enabled `FBT001`/`FBT002`: made `progress` keyword-only (`*`) in `io/las.py`, `io/e57.py`, `io/readers.py`, `annotation/utils.py`, and `bbox/bbox.py`.
+- Enabled `TC002`/`TC003`: moved `numpy` and `Sequence` imports into `TYPE_CHECKING` block in `visualization.py`.
+
 ## [0.16.0] - 2026-06-25
 
 ### Added

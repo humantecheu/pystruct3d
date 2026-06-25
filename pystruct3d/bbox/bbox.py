@@ -775,7 +775,9 @@ class BBox:
         box = bbox_from_cv4aec(cv4aec_dict)
         self.corner_points = box.corner_points
 
-    def to_cv4aec(self, output_style="start_pt", element_id="0", host_id="0") -> dict:
+    def to_cv4aec(
+        self, output_style: str = "start_pt", element_id: str = "0", host_id: str = "0"
+    ) -> dict:
         """Returns the bounding box geometry as a dictionary of cv4aec style parameters.
 
         .. deprecated:: 0.6.0

@@ -59,9 +59,6 @@ ignore = [
     # Docstring style — too prescriptive for scientific code; revisit separately
     "D",
 
-    # Type annotations — not in codebase style yet
-    "ANN",
-
     # Exception message style — too prescriptive for scientific code
     "TRY003",
     "EM101",
@@ -89,8 +86,8 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"scripts/*" = ["T201", "PLW0108", "C901", "EXE001"]
-"tests/*"   = ["S101"]
+"scripts/*" = ["T201", "PLW0108", "C901", "EXE001", "ANN"]
+"tests/*"   = ["S101", "ANN"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"

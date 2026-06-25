@@ -8,7 +8,7 @@ from pystruct3d.visualization.visualization import Visualizer
 class Visualization(Visualizer):
     """Deprecated. Use :class:`Visualizer` instead."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: object, **kwargs: object) -> None:
         warnings.warn(
             "Visualization is deprecated; use Visualizer instead.",
             DeprecationWarning,
