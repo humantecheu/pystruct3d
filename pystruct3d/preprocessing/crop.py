@@ -60,9 +60,10 @@ def crop_roi(
         bins=(n_x_bins, n_y_bins),
         range=((d_min_x, d_max_x), (d_min_y, d_max_y)),
     )
-    if xy_hist.max() == 0:
+    hist_max = float(np.max(xy_hist))
+    if hist_max == 0:
         return xyz, rgb, (float(min_x), float(max_x)), (float(min_y), float(max_y))
-    mask = (xy_hist / xy_hist.max()) > threshold
+    mask = (xy_hist / hist_max) > threshold
 
     bmin, bmax = _mask_boundaries(mask, int(margin_m // resolution_m))
 
