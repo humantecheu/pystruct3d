@@ -6,7 +6,6 @@ import pytest
 from pystruct3d.bbox import BBox
 from pystruct3d.metrics.bbox_iou import bbox_iou
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -88,7 +87,7 @@ def test_fit_horizontal_aligned_recovers_box():
 
 def test_fit_horizontal_aligned_empty_warns():
     b = BBox()
-    with pytest.warns(UserWarning):
+    with pytest.warns(UserWarning):  # noqa: PT030
         b.fit_horizontal_aligned(np.empty((0, 3)))
 
 

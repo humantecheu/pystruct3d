@@ -1,12 +1,12 @@
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
-from pystruct3d.testing import create_bbox_lists
 from pystruct3d.metrics.voxelization_limits import (
     set_iou,
-    weighted_mean_iou,
     voxelization_limits,
+    weighted_mean_iou,
 )
+from pystruct3d.testing import create_bbox_lists
 
 
 def voxelize_bbox(

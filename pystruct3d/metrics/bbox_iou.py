@@ -18,7 +18,6 @@ from pystruct3d.bbox.utils import bbox_list2array
 from pystruct3d.testing import create_bbox_lists
 from pystruct3d.visualization import Visualizer
 
-
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
@@ -254,7 +253,7 @@ def main() -> None:
     Visualizer().add_bbox(gt_boxes, color=[1, 0, 0]).add_bbox(
         pd_boxes, color=[0, 0, 1]
     ).show()
-    print(mean_bbox_iou(gt_boxes, pd_boxes))
+    print(mean_bbox_iou(gt_boxes, pd_boxes))  # noqa: T201
 
 
 if __name__ == "__main__":

@@ -13,9 +13,9 @@ import numpy as np
 
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.metrics.bbox_iou import mean_bbox_iou
-from pystruct3d.testing import create_bbox_lists
 from pystruct3d.metrics.volumetric_iou import voxelize_bbox
 from pystruct3d.metrics.voxelization_limits import voxelization_limits
+from pystruct3d.testing import create_bbox_lists
 
 # ── shared fixtures ────────────────────────────────────────────────────────────
 

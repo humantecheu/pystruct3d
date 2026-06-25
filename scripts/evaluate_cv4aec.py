@@ -52,7 +52,7 @@ CENTROID_RADIUS = 0.5  # metres
 
 
 def _load(path: Path) -> list[BBox]:
-    with open(path) as f:
+    with path.open() as f:
         elements = json.load(f)
     return [bbox_from_cv4aec(elem) for elem in elements]
 

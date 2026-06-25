@@ -2,8 +2,8 @@ import numpy as np
 
 from pystruct3d.metrics.voxelization_limits import (
     set_iou,
-    weighted_mean_iou,
     voxelization_limits,
+    weighted_mean_iou,
 )
 
 
@@ -83,18 +83,19 @@ def mean_voxel_iou(classes_iou: list[tuple[float, int]]) -> float:
 
 
 def main() -> None:
+    rng = np.random.default_rng()
     classes_iou = []
     for i in range(1, 4):
-        pointcloud1 = np.random.uniform(low=0.0, high=20.0, size=(i * 1_000_000, 3))
-        pointcloud2 = np.random.uniform(low=0.0, high=20.0, size=(i * 800_000, 3))
+        pointcloud1 = rng.uniform(low=0.0, high=20.0, size=(i * 1_000_000, 3))
+        pointcloud2 = rng.uniform(low=0.0, high=20.0, size=(i * 800_000, 3))
         classes_iou.append(
             voxel_iou(
                 groundtruth_pc=pointcloud1, predicted_pc=pointcloud2, voxel_size=0.1
             )
         )
-        print(f"Class_{i} IoU: {classes_iou[-1][0]}")
+        print(f"Class_{i} IoU: {classes_iou[-1][0]}")  # noqa: T201
 
-    print(f"mIoU: {mean_voxel_iou(classes_iou=classes_iou)}")
+    print(f"mIoU: {mean_voxel_iou(classes_iou=classes_iou)}")  # noqa: T201
 
 
 if __name__ == "__main__":

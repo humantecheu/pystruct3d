@@ -26,7 +26,13 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=9.0.3", "pdoc>=14.0.0", "ruff>=0.15.0", "ty>=0.0.44"]
+dev = [
+    "pdoc>=14.0.0",
+    "pre-commit>=4.6.0",
+    "pytest>=9.0.3",
+    "ruff>=0.15.0",
+    "ty>=0.0.44",
+]
 
 [tool.setuptools.packages.find]
 include = ["pystruct3d*"]
@@ -44,16 +50,58 @@ quote-style = "double"
 preview     = true
 
 [tool.ruff.lint]
-select = ["E", "F", "B", "C4", "SIM", "UP", "RUF", "PERF", "FURB", "PLR"]
+select = ["ALL"]
 ignore = [
-    "E501",    # line too long — formatter enforces line-length
-    "INP001",  # implicit namespace package — scripts/ intentionally has no __init__.py
-    "PLR0124", # self-comparison — intentional NaN checks (x != x idiom)
-    "PLR0912", # too many branches — large existing UI/script functions
-    "PLR0913", # too many arguments — existing pipeline/UI functions
-    "PLR0915", # too many statements — large existing UI/script functions
-    "PLR2004", # magic-value comparisons — numeric constants throughout scientific code
-    "RUF001",  # ambiguous Unicode in strings — math notation (×, −, …)
-    "RUF002",  # ambiguous Unicode in docstrings — math notation
-    "RUF003",  # ambiguous Unicode in comments — math notation
+    # Formatter owns these
+    "E501",   # line too long — formatter enforces line-length
+    "COM812", # trailing comma — formatter manages
+
+    # Docstring style — too prescriptive for scientific code; revisit separately
+    "D",
+
+    # Type annotations — not in codebase style yet
+    "ANN",
+
+    # Boolean positional args — established API pattern throughout
+    "FBT001",
+    "FBT002",
+
+    # Exception message style — too prescriptive for scientific code
+    "TRY003",
+    "EM101",
+    "EM102",
+
+    # Pylint
+    "PLR0913", # too many arguments — pipeline/scientific functions
+    "PLR2004", # magic value comparisons — numeric constants in scientific code
+
+    # Ruff Unicode — math notation (×, −, σ, …)
+    "RUF001",
+    "RUF002",
+    "RUF003",
+
+    # Namespace packages — scripts/ and tests/ have no __init__.py
+    "INP001",
+
+    # Naming — rotation matrix R is conventional in linear algebra
+    "N806",
+
+    # Import placement — intentional lazy imports for heavy optional deps (open3d, pye57)
+    "PLC0415",
+
+    # TODO annotations — opinionated formatting requirements
+    "TD002",
+    "TD003",
+    "FIX002",
+
+    # TYPE_CHECKING blocks — not used in this codebase
+    "TC002",
+    "TC003",
+
+    # type: ignore specificity — not always possible with third-party stubs
+    "PGH003",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/*" = ["T201", "PLW0108", "C901", "EXE001"]
+"tests/*"   = ["S101"]

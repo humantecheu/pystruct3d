@@ -3,6 +3,23 @@
 All notable changes to pystruct3d are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.0] - 2026-06-25
+
+### Added
+- SPDX license headers (`# SPDX-License-Identifier: MIT / # Copyright (c) 2023 HumanTech`) added to all Python source files.
+
+### Changed
+- Lint config expanded from a selective rule list to `select = ["ALL"]` with an explicit, documented ignore list — broader coverage with every exclusion justified in-place.
+- Removed stale ignores `PLR0124`, `PLR0912`, `PLR0915` — confirmed zero violations in the codebase.
+- Added `per-file-ignores`: `scripts/*` suppresses T201/PLW0108/C901/EXE001; `tests/*` suppresses S101.
+
+### Fixed
+- Import order corrected in 7 modules (`I001`).
+- Unnecessary assignment-before-return inlined in `bbox.py` (`RET504`).
+- `voxel_iou.main` and `scripts/visualize_bbox`: replaced legacy `np.random.uniform` with `np.random.default_rng()` (`NPY002`).
+- `scripts/evaluate_cv4aec._load`: `open()` replaced with `Path.open()` (`PTH123`).
+- `tests/test_bbox_iou`: compound `assert … and …` split into two independent assertions (`PT018`).
+
 ## [0.15.1] - 2026-06-08
 
 ### Fixed

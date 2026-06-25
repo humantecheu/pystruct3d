@@ -18,8 +18,7 @@ class BBox:
             self.order_points()
 
     def __str__(self) -> str:
-        string = f"Bounding Box with points {self.corner_points}"
-        return string
+        return f"Bounding Box with points {self.corner_points}"
 
     def order_points(self) -> None:
         """Order corner points counter-clockwise with the length edge at [0]→[1].
@@ -103,9 +102,7 @@ class BBox:
         """
         lower_points = self.corner_points[:4]
         lower_points_rolled = np.roll(lower_points, 1, axis=0)
-        edges = lower_points_rolled - lower_points
-
-        return edges
+        return lower_points_rolled - lower_points
 
     def length(self) -> float:
         """Return the length (longer horizontal dimension) of the bounding box.
@@ -175,8 +172,7 @@ class BBox:
         rad_angle = np.arctan2(edges[longest_idx, 1], edges[longest_idx, 0])
         angle = np.rad2deg(rad_angle)
         # force angle between 0 and 180
-        angle = (angle + 180) % 180
-        return angle
+        return (angle + 180) % 180
 
     def dir_vector_norm(self) -> np.ndarray:
         """Return the unit vector along the length edge ([0]→[1]).
@@ -185,8 +181,7 @@ class BBox:
             shape (3,) unit vector.
         """
         direction_vec = self.corner_points[1] - self.corner_points[0]
-        dir_norm = direction_vec / np.linalg.norm(direction_vec)
-        return dir_norm
+        return direction_vec / np.linalg.norm(direction_vec)
 
     def get_endpts(self) -> np.ndarray:
         """Return the two midpoints of the length-direction ends of the box.
@@ -206,9 +201,7 @@ class BBox:
             pt_1 = (lower_points[0, :] + lower_points[1, :]) / 2
             pt_2 = (lower_points[2, :] + lower_points[3, :]) / 2
 
-        endpts = np.vstack((pt_1, pt_2))
-
-        return endpts
+        return np.vstack((pt_1, pt_2))
 
     def get_center_plane(self) -> np.ndarray:
         """Return the plane equation of the centre plane along the width axis.
@@ -227,8 +220,7 @@ class BBox:
         plane_point = self.corner_points[0] + 0.5 * width_vector
 
         d = np.negative(np.sum(plane_normal * plane_point))
-        plane_equation = np.append(plane_normal, d)
-        return plane_equation
+        return np.append(plane_normal, d)
 
     def get_side_planes(self) -> tuple[np.ndarray, np.ndarray]:
         """Return the plane equations of the two side faces along the width axis.
@@ -606,8 +598,8 @@ class BBox:
         ])
 
         # Inverse rotation (R^{-1} = R^T for z-axis rotation):
-        # x_orig = x_rot * cos + y_rot * sin
-        # y_orig = -x_rot * sin + y_rot * cos
+        # x_orig = x_rot * cos + y_rot * sin  # noqa: ERA001
+        # y_orig = -x_rot * sin + y_rot * cos  # noqa: ERA001
         corners = corners_rot.copy()
         corners[:, 0] = corners_rot[:, 0] * cn + corners_rot[:, 1] * sn
         corners[:, 1] = -corners_rot[:, 0] * sn + corners_rot[:, 1] * cn

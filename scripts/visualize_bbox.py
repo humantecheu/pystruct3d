@@ -5,7 +5,7 @@ import numpy as np
 from pystruct3d.bbox.bbox import BBox
 from pystruct3d.visualization import Visualizer
 
-rand_pts = np.random.uniform(-100, 100, size=(100_000_000, 3))
+rand_pts = np.random.default_rng().uniform(-100, 100, size=(100_000_000, 3))
 
 sample_points = np.array([
     [0.0, 0.0, 0.0],

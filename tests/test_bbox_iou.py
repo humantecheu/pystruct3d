@@ -11,14 +11,13 @@ import numpy as np
 import pytest
 
 from pystruct3d.metrics.bbox_iou import (
-    _polygon_clip,
     _poly_area,
+    _polygon_clip,
     _to_ccw,
     iou_batch,
     match_iou_stats,
 )
 from pystruct3d.metrics.point_metric import vertex_precision_recall
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -211,7 +210,8 @@ class TestIouBatch:
         positions[:, 2] = 0.0  # keep z-base at 0
         boxes = np.stack([_axis_box(*p, 1, 1, 2) for p in positions])
         iou = iou_batch(boxes, boxes)
-        assert np.all(iou >= 0.0) and np.all(iou <= 1.0)
+        assert np.all(iou >= 0.0)
+        assert np.all(iou <= 1.0)
 
     def test_symmetric(self, unit_box):
         box_a = unit_box[None]
