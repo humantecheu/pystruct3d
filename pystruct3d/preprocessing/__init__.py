@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 from pystruct3d.preprocessing.alignment import align_to_axes as align_to_axes
 from pystruct3d.preprocessing.crop import crop_roi as crop_roi
 from pystruct3d.preprocessing.labels import filter_ids as filter_ids

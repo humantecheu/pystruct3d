@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Visual test: load a LAZ file, show before and after axis alignment with coordinate frame.
 
 Usage:

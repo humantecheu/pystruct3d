@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import KDTree

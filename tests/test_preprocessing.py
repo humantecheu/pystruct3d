@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Tests for pystruct3d.preprocessing — pca, crop, voxel."""
 
 import numpy as np

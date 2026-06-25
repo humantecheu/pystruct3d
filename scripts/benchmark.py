@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Baseline benchmarks for pystruct3d hot paths.
 
 Run with:

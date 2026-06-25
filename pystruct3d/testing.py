@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Synthetic data generators for testing, benchmarking, and quick demos."""
 
 import numpy as np

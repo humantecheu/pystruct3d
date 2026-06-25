@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Converters between BBox and the CV4AEC JSON element format."""
 
 import numpy as np

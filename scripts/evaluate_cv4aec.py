@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Evaluate structure predictions against CV4AEC ground truth.
 
 Computes IoU statistics, vertex precision/recall, and centroid deviation for

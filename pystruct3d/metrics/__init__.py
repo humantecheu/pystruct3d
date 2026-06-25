@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 from pystruct3d.metrics.bbox_iou import bbox_iou as bbox_iou
 from pystruct3d.metrics.bbox_iou import iou_batch as iou_batch
 from pystruct3d.metrics.bbox_iou import match_iou_stats as match_iou_stats

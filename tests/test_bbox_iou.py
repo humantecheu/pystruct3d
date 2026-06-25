@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """Tests for pystruct3d.metrics.bbox_iou and pystruct3d.metrics.point_metric.
 
 Covers iou_batch, match_iou_stats, vertex_precision_recall, plus the private

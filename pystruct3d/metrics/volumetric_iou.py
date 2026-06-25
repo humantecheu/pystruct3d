@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 import numpy as np
 
 from pystruct3d.bbox.bbox import BBox

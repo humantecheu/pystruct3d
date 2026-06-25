@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 """pystruct3d — bounding box fitting, evaluation metrics, and visualization for scan-to-BIM.
 
 Modules:

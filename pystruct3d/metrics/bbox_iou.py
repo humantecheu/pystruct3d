@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 # IoU core (iou_batch, match_iou_stats, and private helpers) ported from
 # github.com/cv4aec/3d-matching-eval (https://github.com/cv4aec/3d-matching-eval).
 # Changes vs original:

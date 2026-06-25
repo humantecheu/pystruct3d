@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2023 HumanTech
 import warnings
 
 from pystruct3d.visualization.visualization import Visualizer
