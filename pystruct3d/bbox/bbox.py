@@ -731,6 +731,7 @@ class BBox:
         self,
         points: np.ndarray,
         probability_threshold: float = 0,
+        *,
         in_2d: bool = False,
     ) -> tuple[np.ndarray, np.ndarray] | tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Deprecated since 0.4.1. Use points_in_bbox(), points_in_bbox_2d(), or points_in_bbox_soft().

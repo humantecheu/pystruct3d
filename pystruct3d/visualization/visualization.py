@@ -2,12 +2,17 @@
 # Copyright (c) 2023 HumanTech
 from __future__ import annotations
 
-from collections.abc import Sequence
+from typing import TYPE_CHECKING
 
-import numpy as np
 import open3d as o3d
+import open3d.visualization
 
 from pystruct3d.bbox.bbox import BBox
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    import numpy as np
 
 _Geometry = o3d.geometry.Geometry3D
 
@@ -217,7 +222,7 @@ class Visualizer:
         if not geoms:
             return
         if trajectory is not None:
-            o3d.visualization.draw_geometries_with_custom_animation(  # type: ignore
+            o3d.visualization.draw_geometries_with_custom_animation(  # ty: ignore[unresolved-attribute]
                 geoms,
                 window_name=window_name,
                 width=width,
@@ -225,6 +230,6 @@ class Visualizer:
                 optional_view_trajectory_json_file=trajectory,
             )
         else:
-            o3d.visualization.draw_geometries(  # type: ignore
+            o3d.visualization.draw_geometries(  # ty: ignore[unresolved-attribute]
                 geoms, window_name=window_name, width=width, height=height
             )

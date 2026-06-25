@@ -62,10 +62,6 @@ ignore = [
     # Type annotations — not in codebase style yet
     "ANN",
 
-    # Boolean positional args — established API pattern throughout
-    "FBT001",
-    "FBT002",
-
     # Exception message style — too prescriptive for scientific code
     "TRY003",
     "EM101",
@@ -80,9 +76,6 @@ ignore = [
     "RUF002",
     "RUF003",
 
-    # Namespace packages — scripts/ and tests/ have no __init__.py
-    "INP001",
-
     # Naming — rotation matrix R is conventional in linear algebra
     "N806",
 
@@ -93,15 +86,11 @@ ignore = [
     "TD002",
     "TD003",
     "FIX002",
-
-    # TYPE_CHECKING blocks — not used in this codebase
-    "TC002",
-    "TC003",
-
-    # type: ignore specificity — not always possible with third-party stubs
-    "PGH003",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["T201", "PLW0108", "C901", "EXE001"]
 "tests/*"   = ["S101"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

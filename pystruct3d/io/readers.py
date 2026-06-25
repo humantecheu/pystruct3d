@@ -37,6 +37,7 @@ def _read_open3d_file(path: Path) -> tuple[np.ndarray, np.ndarray]:
 
 def read_point_cloud(
     path: Path | str,
+    *,
     progress: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Read a point cloud file, routing to the correct reader by extension.

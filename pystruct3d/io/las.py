@@ -18,6 +18,7 @@ _CHUNK_SIZE = 10_000_000  # points per chunk for streaming reads
 
 def read_las_file(
     las_path: Path | str,
+    *,
     progress: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Read a LAS / LAZ file.

@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 def read_e57_file(
     e57_path: Path | str,
+    *,
     progress: bool = True,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Read an E57 file, concatenating all scans into a single point cloud.

@@ -16,6 +16,7 @@ def transfer_labels(
     labeled_pcd: o3d.geometry.PointCloud,
     labels_array: np.ndarray,
     unlabeled_pcd: o3d.geometry.PointCloud,
+    *,
     progress: bool = True,
 ) -> np.ndarray:
     """Transfer point-level labels from an annotated cloud to an unannotated one.
